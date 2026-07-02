@@ -1,0 +1,23 @@
+# Root workspace - manages all three packages
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Env files — NEVER COMMIT THESE
+backend/.env
+app/android/key.properties
+app/android/app/upload-keystore-new.jks
+app/android/app/google-services.json
+app/ios/GoogleService-Info.plist
+backend/src/config/serviceAccountKey.json
+
+# Build outputs
+admin/dist/
+app/android/app/build/
+app/ios/build/

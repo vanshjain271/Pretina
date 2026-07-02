@@ -1,0 +1,17 @@
+{
+  "name": "pretina",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "admin"
+  ],
+  "scripts": {
+    "backend": "npm run dev --workspace=backend",
+    "admin": "npm run dev --workspace=admin"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
