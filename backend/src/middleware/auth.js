@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const admin = require('../config/firebase');
+const { firebaseInitialized } = require('../config/firebase');
 const User = require('../models/User');
 
 /**
@@ -30,7 +31,13 @@ const protect = async (req, res, next) => {
       // Not a JWT — try Firebase token (customer)
     }
 
-    // Try Firebase ID Token
+    // Try Firebase ID Token (only if Firebase is configured)
+    if (!firebaseInitialized) {
+      return res.status(401).json({
+        success: false,
+        message: 'Firebase Auth is not yet configured on this server.',
+      });
+    }
     try {
       const decodedFirebase = await admin.auth().verifyIdToken(token);
       const { uid, phone_number, name, picture } = decodedFirebase;

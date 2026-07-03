@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const admin = require('../config/firebase');
+const { firebaseInitialized } = require('../config/firebase');
 
 // Helper: sign JWT for admin/employee
 const signJwt = (id) => {
@@ -16,6 +17,13 @@ const signJwt = (id) => {
  */
 exports.firebaseLogin = async (req, res, next) => {
   try {
+    if (!firebaseInitialized) {
+      return res.status(503).json({
+        success: false,
+        message: 'Firebase Auth is not yet configured. Contact administrator.',
+      });
+    }
+
     const { idToken, fcmToken } = req.body;
     if (!idToken) {
       return res.status(400).json({ success: false, message: 'Firebase ID token is required.' });
