@@ -1,0 +1,28 @@
+/* Pretina Admin — Global Styles */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --pretina-orange: #FF6B00;
+  --pretina-orange-light: #FF8C38;
+  --pretina-orange-dark: #CC5500;
+  --bg: #F5F5F5;
+  --surface: #FFFFFF;
+  --sidebar-bg: #1A1A2E;
+  --sidebar-text: #E0E0E0;
+  --sidebar-active: #FF6B00;
+  --text-primary: #1A1A2E;
+  --text-secondary: #666;
+  --border: #E0E0E0;
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #aaa; }
