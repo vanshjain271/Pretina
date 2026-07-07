@@ -15,9 +15,9 @@ async function seed() {
   } else {
     const admin = await User.create({
       name: process.env.ADMIN_NAME || 'Pretina Admin',
-      email: process.env.ADMIN_EMAIL || 'admin@pretina.in',
+      email: process.env.ADMIN_EMAIL || 'admin@pretina.com',
       phone: '0000000000',
-      password: process.env.ADMIN_PASSWORD || 'Pretina@Admin2025',
+      password: process.env.ADMIN_PASSWORD || 'admin123',
       role: 'admin',
       isPhoneVerified: true,
       permissions: {
