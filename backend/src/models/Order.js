@@ -75,7 +75,11 @@ const orderSchema = new mongoose.Schema({
 
   // Tracking
   trackingNumber: { type: String, default: '' },
+  trackingUrl:    { type: String, default: '' },
   courierName:    { type: String, default: '' },
+
+  // Advance / Token payment (partial COD payment collected before shipping)
+  tokenReceived:  { type: Number, default: 0, min: 0 },
 
   // Status history
   statusHistory: [{
@@ -84,6 +88,14 @@ const orderSchema = new mongoose.Schema({
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     updatedAt: { type: Date, default: Date.now },
   }],
+
+  // Cancellation
+  cancelledBy:         { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  cancellationReason:  { type: String, default: '' },
+  cancelledAt:         { type: Date, default: null },
+
+  // Invoice reference (generated after confirmation)
+  invoice: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice', default: null },
 
   // Notes
   customerNote: { type: String, default: '' },
