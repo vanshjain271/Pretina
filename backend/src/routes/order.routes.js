@@ -203,4 +203,118 @@ router.get('/', protect, staffOnly, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// PATCH update order courier (admin/staff)
+router.patch('/:id/courier', protect, staffOnly, async (req, res, next) => {
+  try {
+    const { courierName, trackingNumber, trackingUrl } = req.body;
+    const order = await Order.findByIdAndUpdate(
+      req.params.id,
+      { courierName, trackingNumber, trackingUrl },
+      { new: true }
+    );
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found.' });
+    res.json({ success: true, data: order });
+  } catch (err) { next(err); }
+});
+
+// PATCH update token received (admin/staff)
+router.patch('/:id/token', protect, staffOnly, async (req, res, next) => {
+  try {
+    const { tokenReceived } = req.body;
+    const order = await Order.findByIdAndUpdate(
+      req.params.id,
+      { tokenReceived },
+      { new: true }
+    );
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found.' });
+    res.json({ success: true, data: order });
+  } catch (err) { next(err); }
+});
+
+// GET export orders CSV (admin/staff)
+router.get('/export', protect, staffOnly, async (req, res, next) => {
+  try {
+    const { status, startDate, endDate } = req.query;
+    const filter = {};
+    if (status) filter.status = status;
+    if (startDate && endDate) {
+      filter.createdAt = { $gte: new Date(startDate), $lte: new Date(endDate) };
+    }
+    
+    const orders = await Order.find(filter).populate('user', 'name phone email').lean();
+    
+    // Simple CSV generator
+    let csv = 'Order Number,Date,Customer,Phone,Amount,Status,Payment Method\n';
+    orders.forEach(o => {
+      csv += `${o.orderNumber},${new Date(o.createdAt).toLocaleDateString('en-IN')},"${o.user?.name || o.shippingAddress?.name}","${o.user?.phone || o.shippingAddress?.phone}",${o.total},${o.status},${o.paymentMethod}\n`;
+    });
+    
+    res.header('Content-Type', 'text/csv');
+    res.attachment('orders_export.csv');
+    return res.send(csv);
+  } catch (err) { next(err); }
+});
+
+// GET abandoned carts (admin/staff)
+router.get('/abandoned', protect, staffOnly, async (req, res, next) => {
+  try {
+    const thresholdTime = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const carts = await Cart.find({
+      'items.0': { $exists: true },
+      updatedAt: { $lt: thresholdTime }
+    })
+    .populate('user', 'name phone email')
+    .populate('items.product', 'name price images')
+    .sort({ updatedAt: -1 })
+    .lean();
+    
+    res.json({ success: true, data: carts });
+  } catch (err) { next(err); }
+});
+
+// POST manual order (admin/staff)
+router.post('/manual', protect, staffOnly, async (req, res, next) => {
+  try {
+    const { customerId, items, shippingAddress, paymentMethod, discount = 0, deliveryFee = 0 } = req.body;
+    
+    let subtotal = 0;
+    const orderItems = [];
+    
+    for (const item of items) {
+      const product = await Product.findById(item.productId);
+      if (!product) continue;
+      
+      const total = item.price * item.quantity;
+      subtotal += total;
+      
+      orderItems.push({
+        product: product._id,
+        name: product.name,
+        image: product.images[0] || '',
+        price: item.price,
+        mrp: product.price,
+        quantity: item.quantity,
+        total
+      });
+    }
+    
+    const total = subtotal - discount + deliveryFee;
+    
+    const order = await Order.create({
+      user: customerId,
+      items: orderItems,
+      subtotal,
+      discount,
+      deliveryFee,
+      total,
+      shippingAddress,
+      paymentMethod,
+      paymentStatus: paymentMethod === 'cod' ? 'pending' : 'paid',
+      statusHistory: [{ status: 'pending', note: 'Manual order created by staff.', updatedBy: req.user._id }]
+    });
+    
+    res.status(201).json({ success: true, data: order });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
