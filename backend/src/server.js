@@ -56,6 +56,12 @@ app.use('/api/v1/coupons',    require('./routes/coupon.routes'));
 app.use('/api/v1/payments',   require('./routes/payment.routes'));
 app.use('/api/v1/settings',   require('./routes/settings.routes'));
 app.use('/api/v1/upload',     require('./routes/upload.routes'));
+// ── New routes (YouthQit feature parity) ─────────────────
+app.use('/api/v1/analytics',  require('./routes/analytics.routes'));
+app.use('/api/v1/employees',  require('./routes/employee.routes'));
+app.use('/api/v1/invoices',   require('./routes/invoice.routes'));
+app.use('/api/v1/blogs',      require('./routes/blog.routes'));
+app.use('/api/v1/notifications', require('./routes/notification.routes'));
 
 // ── Health Check ─────────────────────────────────────────
 app.get('/api/v1/health', (req, res) => {
@@ -85,7 +91,7 @@ app.use((err, req, res, next) => {
 });
 
 // ── Start Server ─────────────────────────────────────────
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`🚀 Pretina API running on port ${PORT} [${process.env.NODE_ENV}]`);
 });
