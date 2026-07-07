@@ -1,158 +1,321 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Box, Grid, Card, CardContent, Typography,
-  Chip, Divider, CircularProgress,
+  Box, Grid, Card, CardContent, Typography, Chip, Avatar,
+  CircularProgress, Button, Divider, List, ListItem, ListItemText,
+  ListItemAvatar, IconButton, Tooltip,
 } from '@mui/material';
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
-import InventoryIcon from '@mui/icons-material/Inventory2';
-import PeopleIcon from '@mui/icons-material/People';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import PendingActionsIcon from '@mui/icons-material/PendingActions';
-import { getOrders, getProducts, getUsers, getSettings } from '../api/endpoints';
+import TrendingUpIcon     from '@mui/icons-material/TrendingUp';
+import ShoppingCartIcon   from '@mui/icons-material/ShoppingCart';
+import PeopleIcon         from '@mui/icons-material/People';
+import InventoryIcon      from '@mui/icons-material/Inventory2';
+import WarningAmberIcon   from '@mui/icons-material/WarningAmber';
+import RefreshIcon        from '@mui/icons-material/Refresh';
+import ArrowForwardIcon   from '@mui/icons-material/ArrowForward';
+import { useNavigate }    from 'react-router-dom';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  Tooltip as ChartTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend,
+} from 'recharts';
+import { getDashboardOverview } from '../api/endpoints';
 
-const StatCard = ({ icon, label, value, color, sub }) => (
-  <Card>
-    <CardContent>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-        <Box sx={{
-          width: 44, height: 44, borderRadius: '12px',
-          background: `${color}18`, display: 'flex',
-          alignItems: 'center', justifyContent: 'center',
-        }}>
-          {React.cloneElement(icon, { sx: { color, fontSize: 22 } })}
+const COLORS = ['#FF6B00', '#1A1A2E', '#4CAF50', '#2196F3', '#FF5722', '#9C27B0'];
+
+function StatCard({ label, value, icon, sub, color = '#FF6B00', onClick }) {
+  return (
+    <Card
+      sx={{
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'transform 0.15s, box-shadow 0.15s',
+        '&:hover': onClick ? { transform: 'translateY(-2px)', boxShadow: '0 8px 24px rgba(255,107,0,0.15)' } : {},
+      }}
+      onClick={onClick}
+    >
+      <CardContent sx={{ p: 2.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <Box>
+            <Typography variant="caption" color="text.secondary" fontWeight={500} textTransform="uppercase" letterSpacing={0.5}>
+              {label}
+            </Typography>
+            <Typography variant="h4" fontWeight={700} sx={{ color, my: 0.5 }}>
+              {value ?? <CircularProgress size={24} />}
+            </Typography>
+            {sub && <Typography variant="caption" color="text.secondary">{sub}</Typography>}
+          </Box>
+          <Avatar sx={{ bgcolor: `${color}18`, color, width: 48, height: 48 }}>
+            {icon}
+          </Avatar>
         </Box>
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="caption" color="text.secondary" fontWeight={500}>{label}</Typography>
-          <Typography variant="h5" fontWeight={700} color="#1A1A2E">{value}</Typography>
-        </Box>
-      </Box>
-      {sub && <Typography variant="caption" color="text.secondary">{sub}</Typography>}
-    </CardContent>
-  </Card>
-);
+      </CardContent>
+    </Card>
+  );
+}
+
+function StatusBadge({ status }) {
+  const map = {
+    pending:   { color: 'warning', label: 'Pending' },
+    confirmed: { color: 'info',    label: 'Confirmed' },
+    packed:    { color: 'primary', label: 'Packed' },
+    shipped:   { color: 'primary', label: 'Shipped' },
+    delivered: { color: 'success', label: 'Delivered' },
+    cancelled: { color: 'error',   label: 'Cancelled' },
+    returned:  { color: 'default', label: 'Returned' },
+  };
+  const s = map[status] || { color: 'default', label: status };
+  return <Chip label={s.label} color={s.color} size="small" sx={{ fontWeight: 600 }} />;
+}
 
 export default function Dashboard() {
-  const [stats, setStats] = useState(null);
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [settings, setSettings] = useState(null);
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [ordersRes, productsRes, usersRes, settingsRes] = await Promise.all([
-          getOrders({ limit: 5 }),
-          getProducts({ limit: 1 }),
-          getUsers({ limit: 1 }),
-          getSettings(),
-        ]);
-        setStats({
-          orders: ordersRes.data.pagination?.total || 0,
-          products: productsRes.data.pagination?.total || 0,
-          users: usersRes.data.pagination?.total || 0,
-          pendingOrders: ordersRes.data.data?.filter(o => o.status === 'pending').length || 0,
-          recentOrders: ordersRes.data.data || [],
-        });
-        setSettings(settingsRes.data.data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const res = await getDashboardOverview();
+      setData(res.data.overview);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  if (loading) return (
-    <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-      <CircularProgress sx={{ color: '#FF6B00' }} />
-    </Box>
-  );
+  useEffect(() => { fetchData(); }, []);
+
+  const ov = data || {};
+
+  // Build pie data from ordersByStatus
+  const statusPieData = ov.ordersByStatus
+    ? Object.entries(ov.ordersByStatus).map(([k, v]) => ({ name: k, value: v }))
+    : [];
 
   return (
-    <Box>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h5" fontWeight={700} color="#1A1A2E">Dashboard</Typography>
-        <Typography variant="body2" color="text.secondary">Welcome back — here's what's happening today.</Typography>
+    <Box sx={{ p: 3 }}>
+      {/* Header */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+        <Box>
+          <Typography variant="h5" fontWeight={700}>Dashboard</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </Typography>
+        </Box>
+        <Tooltip title="Refresh">
+          <IconButton onClick={fetchData} disabled={loading}>
+            <RefreshIcon />
+          </IconButton>
+        </Tooltip>
       </Box>
 
-      {/* Payment Methods Status */}
-      {settings && (
-        <Card sx={{ mb: 3, border: '1px solid #E0E0E0' }}>
-          <CardContent>
-            <Typography variant="subtitle2" fontWeight={700} color="#1A1A2E" gutterBottom>
-              Payment Methods Active
+      {/* AI Insight Banner */}
+      {ov.lowStockProducts > 0 && (
+        <Card sx={{
+          mb: 3,
+          background: 'linear-gradient(135deg, #FF6B00 0%, #FF8C38 100%)',
+          color: '#fff',
+        }}>
+          <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, py: '12px !important' }}>
+            <WarningAmberIcon />
+            <Typography fontWeight={600} flex={1}>
+              ⚠️ {ov.lowStockProducts} product(s) running low on stock — review inventory
             </Typography>
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              <Chip
-                label="Razorpay" size="small"
-                color={settings.paymentRazorpayEnabled ? 'success' : 'default'}
-                variant={settings.paymentRazorpayEnabled ? 'filled' : 'outlined'}
-              />
-              <Chip
-                label="QR / UPI" size="small"
-                color={settings.paymentQrEnabled ? 'success' : 'default'}
-                variant={settings.paymentQrEnabled ? 'filled' : 'outlined'}
-              />
-              <Chip
-                label="Cash on Delivery" size="small"
-                color={settings.paymentCodEnabled ? 'success' : 'default'}
-                variant={settings.paymentCodEnabled ? 'filled' : 'outlined'}
-              />
-            </Box>
+            <Button
+              variant="outlined"
+              size="small"
+              sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.6)', whiteSpace: 'nowrap' }}
+              onClick={() => navigate('/analytics/inventory')}
+            >
+              View Inventory
+            </Button>
           </CardContent>
         </Card>
       )}
 
-      {/* Stat Cards */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard icon={<ShoppingCartIcon />} label="Total Orders" value={stats?.orders || 0} color="#FF6B00" />
+      {/* KPI Cards */}
+      <Grid container spacing={2.5} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={6} lg={3}>
+          <StatCard
+            label="Revenue This Month"
+            value={ov.thisMonth ? `₹${ov.thisMonth.sales?.toLocaleString('en-IN') || 0}` : null}
+            icon={<TrendingUpIcon />}
+            sub={`${ov.thisMonth?.orders || 0} orders`}
+            color="#FF6B00"
+          />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard icon={<PendingActionsIcon />} label="Pending Orders" value={stats?.pendingOrders || 0} color="#f59e0b" />
+        <Grid item xs={12} sm={6} lg={3}>
+          <StatCard
+            label="Total Customers"
+            value={ov.totalCustomers ?? null}
+            icon={<PeopleIcon />}
+            sub={`${ov.last30Days?.activeUsers || 0} active (30d)`}
+            color="#1A1A2E"
+            onClick={() => navigate('/customers')}
+          />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard icon={<InventoryIcon />} label="Products" value={stats?.products || 0} color="#6366f1" />
+        <Grid item xs={12} sm={6} lg={3}>
+          <StatCard
+            label="Orders (30 days)"
+            value={ov.last30Days?.orders ?? null}
+            icon={<ShoppingCartIcon />}
+            sub={`${ov.abandonedCarts || 0} abandoned`}
+            color="#4CAF50"
+            onClick={() => navigate('/orders')}
+          />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard icon={<PeopleIcon />} label="Customers" value={stats?.users || 0} color="#10b981" />
+        <Grid item xs={12} sm={6} lg={3}>
+          <StatCard
+            label="Low Stock Items"
+            value={ov.lowStockProducts ?? null}
+            icon={<InventoryIcon />}
+            sub="Products below threshold"
+            color={ov.lowStockProducts > 0 ? '#FF5722' : '#4CAF50'}
+            onClick={() => navigate('/analytics/inventory')}
+          />
+        </Grid>
+      </Grid>
+
+      {/* Charts Row */}
+      <Grid container spacing={2.5} sx={{ mb: 3 }}>
+        {/* Sales Trend */}
+        <Grid item xs={12} md={8}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="subtitle1" fontWeight={700}>Sales Trend (Last 30 Days)</Typography>
+                <Button size="small" endIcon={<ArrowForwardIcon />} onClick={() => navigate('/reports')}>
+                  Full Report
+                </Button>
+              </Box>
+              {ov.salesTrend && ov.salesTrend.length > 0 ? (
+                <ResponsiveContainer width="100%" height={220}>
+                  <AreaChart data={ov.salesTrend}>
+                    <defs>
+                      <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor="#FF6B00" stopOpacity={0.25} />
+                        <stop offset="95%" stopColor="#FF6B00" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={d => d.slice(5)}
+                      tick={{ fontSize: 11 }}
+                    />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `₹${v >= 1000 ? (v/1000).toFixed(0)+'k' : v}`} />
+                    <ChartTooltip
+                      formatter={(v) => [`₹${v.toLocaleString('en-IN')}`, 'Sales']}
+                      labelFormatter={l => `Date: ${l}`}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="sales"
+                      stroke="#FF6B00"
+                      strokeWidth={2}
+                      fill="url(#salesGrad)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <Box sx={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {loading
+                    ? <CircularProgress size={32} />
+                    : <Typography color="text.secondary">No sales data for this period</Typography>
+                  }
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Order Status Pie */}
+        <Grid item xs={12} md={4}>
+          <Card sx={{ height: '100%' }}>
+            <CardContent>
+              <Typography variant="subtitle1" fontWeight={700} mb={2}>Orders by Status</Typography>
+              {statusPieData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie
+                      data={statusPieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {statusPieData.map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Legend iconSize={10} iconType="circle" />
+                    <ChartTooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <Box sx={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {loading
+                    ? <CircularProgress size={32} />
+                    : <Typography color="text.secondary">No order data</Typography>
+                  }
+                </Box>
+              )}
+            </CardContent>
+          </Card>
         </Grid>
       </Grid>
 
       {/* Recent Orders */}
       <Card>
         <CardContent>
-          <Typography variant="subtitle1" fontWeight={700} color="#1A1A2E" gutterBottom>
-            Recent Orders
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-          {stats?.recentOrders.length === 0 ? (
-            <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
-              No orders yet.
-            </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <Typography variant="subtitle1" fontWeight={700}>Recent Orders</Typography>
+            <Button size="small" endIcon={<ArrowForwardIcon />} onClick={() => navigate('/orders')}>
+              View All
+            </Button>
+          </Box>
+          <Divider sx={{ mb: 1 }} />
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+              <CircularProgress />
+            </Box>
+          ) : ov.recentOrders?.length > 0 ? (
+            <List disablePadding>
+              {ov.recentOrders.map((order, i) => (
+                <React.Fragment key={order._id}>
+                  <ListItem
+                    disablePadding
+                    sx={{ py: 1, cursor: 'pointer', '&:hover': { background: '#fafafa' }, borderRadius: 1 }}
+                    onClick={() => navigate(`/orders/${order._id}`)}
+                  >
+                    <ListItemAvatar>
+                      <Avatar sx={{ bgcolor: '#FF6B001A', color: '#FF6B00', fontSize: 13, fontWeight: 700 }}>
+                        {order.orderNumber?.slice(-3)}
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={<Typography fontWeight={600} fontSize={14}>{order.orderNumber}</Typography>}
+                      secondary={
+                        <Typography fontSize={12} color="text.secondary">
+                          {order.user?.name || 'Customer'} · {new Date(order.createdAt).toLocaleDateString('en-IN')}
+                        </Typography>
+                      }
+                    />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <StatusBadge status={order.status} />
+                      <Typography fontWeight={700} color="primary" fontSize={14}>
+                        ₹{order.total?.toLocaleString('en-IN')}
+                      </Typography>
+                    </Box>
+                  </ListItem>
+                  {i < ov.recentOrders.length - 1 && <Divider />}
+                </React.Fragment>
+              ))}
+            </List>
           ) : (
-            stats?.recentOrders.map((order) => (
-              <Box key={order._id} sx={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                py: 1.5, borderBottom: '1px solid #F0F0F0',
-              }}>
-                <Box>
-                  <Typography variant="body2" fontWeight={600}>{order.orderNumber}</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {order.user?.name} · ₹{order.total}
-                  </Typography>
-                </Box>
-                <Chip
-                  label={order.status}
-                  size="small"
-                  color={
-                    order.status === 'delivered' ? 'success' :
-                    order.status === 'pending' ? 'warning' :
-                    order.status === 'cancelled' ? 'error' : 'default'
-                  }
-                />
-              </Box>
-            ))
+            <Typography color="text.secondary" textAlign="center" py={3}>
+              No recent orders
+            </Typography>
           )}
         </CardContent>
       </Card>
