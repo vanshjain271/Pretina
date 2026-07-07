@@ -32,16 +32,44 @@ const userSchema = new mongoose.Schema({
 
   // Admin / Employee fields
   password:    { type: String, default: '' }, // Only for admin/employee
+
+  // Granular permissions for employees (string array — matches YouthQit pattern)
   permissions: {
-    manageProducts: { type: Boolean, default: false },
-    manageOrders:   { type: Boolean, default: false },
-    manageUsers:    { type: Boolean, default: false },
+    type: [String],
+    enum: [
+      'products.view', 'products.manage',
+      'orders.view', 'orders.manage',
+      'invoices.view', 'invoices.manage',
+      'customers.view', 'customers.manage',
+      'reports.view',
+      'settings.manage',
+      'coupons.view', 'coupons.manage',
+      'brands.view', 'brands.manage',
+      'categories.view', 'categories.manage',
+      'employees.view', 'employees.manage',
+      'blog.view', 'blog.manage',
+      'activity.view',
+      'banners.view', 'banners.manage',
+    ],
+    default: [],
   },
+
+  // Who created this employee (for audit trail)
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 
   // Status
   isActive:       { type: Boolean, default: true },
   isPhoneVerified:{ type: Boolean, default: false },
-  fcmToken:       { type: String, default: '' }, // For push notifications
+
+  // Push notification tokens (multi-device support)
+  fcmTokens: [{
+    token:    { type: String, required: true },
+    device:   { type: String, enum: ['android', 'ios', 'web'], default: 'android' },
+    addedAt:  { type: Date, default: Date.now },
+  }],
+
+  // Legacy single FCM token (keep for backward compatibility)
+  fcmToken:  { type: String, default: '' },
 
   // Wishlist (array of product IDs)
   wishlist:    [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
