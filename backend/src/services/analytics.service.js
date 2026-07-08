@@ -17,17 +17,16 @@ class AnalyticsService {
   // PUBLIC METHODS
   // ─────────────────────────────────────────────────────────────────
 
-  async getDashboardOverview() {
+  async getDashboardOverview(period = 'last30days', startDate = null, endDate = null) {
     try {
-      const now = new Date();
-      const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const last30Days = new Date(now - 30 * 24 * 60 * 60 * 1000);
+      const dateRange = this._getDateRange(period, startDate, endDate);
+      if (!dateRange.success) return dateRange;
+      const { start, end } = dateRange;
 
       const [
-        totalSalesThisMonth,
-        totalOrdersThisMonth,
-        totalOrders30Days,
-        activeUsers30Days,
+        totalSales,
+        totalOrders,
+        activeUsers,
         abandonedCartsCount,
         lowStockProducts,
         totalCustomers,
@@ -35,10 +34,9 @@ class AnalyticsService {
         ordersByStatus,
         salesTrend,
       ] = await Promise.all([
-        this._calculateSales(thisMonthStart, now),
-        this._countOrders(thisMonthStart, now),
-        this._countOrders(last30Days, now),
-        this._countActiveUsers(last30Days, now),
+        this._calculateSales(start, end),
+        this._countOrders(start, end),
+        this._countActiveUsers(start, end),
         this._countAbandonedCarts(),
         this._getLowStockProducts(10),
         User.countDocuments({ role: 'customer', isActive: true }),
@@ -48,15 +46,18 @@ class AnalyticsService {
           .populate('user', 'name phone')
           .select('orderNumber status total paymentMethod createdAt')
           .lean(),
-        this._getOrdersByStatus(thisMonthStart, now),
-        this._getSalesByDay(last30Days, now, 'last30days'),
+        this._getOrdersByStatus(start, end),
+        this._getSalesByDay(start, end, period),
       ]);
 
       return {
         success: true,
         overview: {
-          thisMonth: { sales: totalSalesThisMonth, orders: totalOrdersThisMonth },
-          last30Days: { orders: totalOrders30Days, activeUsers: activeUsers30Days },
+          selectedPeriod: { 
+            sales: totalSales, 
+            orders: totalOrders,
+            activeUsers: activeUsers
+          },
           totalCustomers,
           abandonedCarts: abandonedCartsCount,
           lowStockProducts: lowStockProducts.length,

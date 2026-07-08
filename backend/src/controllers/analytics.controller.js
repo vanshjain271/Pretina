@@ -6,7 +6,8 @@ const AnalyticsService = require('../services/analytics.service');
 
 const getDashboardOverview = async (req, res) => {
   try {
-    const result = await AnalyticsService.getDashboardOverview();
+    const { period, dateFrom, dateTo } = req.query;
+    const result = await AnalyticsService.getDashboardOverview(period, dateFrom, dateTo);
     if (!result.success) return res.status(400).json(result);
     return res.json({ success: true, overview: result.overview });
   } catch (err) {

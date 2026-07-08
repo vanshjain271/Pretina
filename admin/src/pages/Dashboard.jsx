@@ -68,13 +68,18 @@ function StatusBadge({ status }) {
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState('last30days');
+  const [period, setPeriod] = useState('all_time');
+  const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
   const navigate = useNavigate();
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await getDashboardOverview({ period });
+      const params = { period: 'custom' };
+      if (dateRange.startDate) params.dateFrom = dateRange.startDate;
+      if (dateRange.endDate) params.dateTo = dateRange.endDate;
+      
+      const res = await getDashboardOverview(params);
       setData(res.data.overview);
     } catch (e) {
       console.error(e);
@@ -83,7 +88,7 @@ export default function Dashboard() {
     }
   };
 
-  useEffect(() => { fetchData(); }, [period]);
+  useEffect(() => { fetchData(); }, [dateRange]);
 
   const ov = data || {};
 
@@ -105,7 +110,10 @@ export default function Dashboard() {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <TimeframeFilter
             value={period}
-            onChange={({ timeframe }) => setPeriod(timeframe)}
+            onChange={({ timeframe, startDate, endDate }) => {
+              setPeriod(timeframe);
+              setDateRange({ startDate, endDate });
+            }}
           />
           <Tooltip title="Refresh">
             <IconButton onClick={fetchData} disabled={loading} sx={{ bgcolor: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
@@ -139,14 +147,14 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* KPI Cards */}
+      {/* Top Stats */}
       <Grid container spacing={2.5} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} lg={3}>
           <StatCard
-            label="Revenue This Month"
-            value={ov.thisMonth ? `₹${ov.thisMonth.sales?.toLocaleString('en-IN') || 0}` : null}
+            label="Revenue (Period)"
+            value={ov.selectedPeriod?.sales !== undefined ? `₹${ov.selectedPeriod.sales.toLocaleString('en-IN')}` : null}
             icon={<TrendingUpIcon />}
-            sub={`${ov.thisMonth?.orders || 0} orders`}
+            sub={`${ov.selectedPeriod?.orders || 0} orders`}
             color="#FF6B00"
           />
         </Grid>
@@ -155,17 +163,17 @@ export default function Dashboard() {
             label="Total Customers"
             value={ov.totalCustomers ?? null}
             icon={<PeopleIcon />}
-            sub={`${ov.last30Days?.activeUsers || 0} active (30d)`}
+            sub={`${ov.selectedPeriod?.activeUsers || 0} active in period`}
             color="#1A1A2E"
             onClick={() => navigate('/customers')}
           />
         </Grid>
         <Grid item xs={12} sm={6} lg={3}>
           <StatCard
-            label="Orders (30 days)"
-            value={ov.last30Days?.orders ?? null}
+            label="Orders (Period)"
+            value={ov.selectedPeriod?.orders ?? null}
             icon={<ShoppingCartIcon />}
-            sub={`${ov.abandonedCarts || 0} abandoned`}
+            sub={`${ov.abandonedCarts || 0} abandoned total`}
             color="#4CAF50"
             onClick={() => navigate('/orders')}
           />
@@ -188,8 +196,8 @@ export default function Dashboard() {
         <Grid item xs={12} md={8}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="subtitle1" fontWeight={700}>Sales Trend (Last 30 Days)</Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="h6" fontWeight={700}>Sales Trend (Selected Period)</Typography>
                 <Button size="small" endIcon={<ArrowForwardIcon />} onClick={() => navigate('/reports')}>
                   Full Report
                 </Button>
