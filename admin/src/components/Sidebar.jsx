@@ -153,7 +153,7 @@ export default function Sidebar({ open, width }) {
   const navigate = useNavigate();
   const user = useSelector(s => s.auth.user);
 
-  const isEmployee = user?.role === 'EMPLOYEE';
+  const isEmployee = user?.role === 'employee';
   const userPermissions = user?.permissions || [];
 
   const checkPermission = (itemPermissions) => {

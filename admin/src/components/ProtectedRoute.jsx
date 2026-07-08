@@ -9,7 +9,7 @@ export default function ProtectedRoute({ permissions, children }) {
     return <Navigate to="/login" replace />;
   }
 
-  const isEmployee = user?.role === 'EMPLOYEE';
+  const isEmployee = user?.role === 'employee';
   const userPermissions = user?.permissions || [];
 
   if (isEmployee && permissions && permissions.length > 0) {
