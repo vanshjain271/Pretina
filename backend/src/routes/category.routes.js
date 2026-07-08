@@ -6,8 +6,11 @@ const { deleteFile } = require('../services/s3.service');
 
 const setFolder = (f) => (req, res, next) => { req.uploadFolder = f; next(); };
 
+// ── Cache Middleware ──────────────────────────────────────
+const setCache = (req, res, next) => { res.set('Cache-Control', 'private, max-age=300'); next(); };
+
 // GET all active categories (public)
-router.get('/', async (req, res, next) => {
+router.get('/', setCache, async (req, res, next) => {
   try {
     const categories = await Category.find({ isActive: true }).sort({ sortOrder: 1, name: 1 });
     res.json({ success: true, data: categories });
@@ -15,7 +18,7 @@ router.get('/', async (req, res, next) => {
 });
 
 // GET single category
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', setCache, async (req, res, next) => {
   try {
     const category = await Category.findById(req.params.id);
     if (!category) return res.status(404).json({ success: false, message: 'Category not found.' });

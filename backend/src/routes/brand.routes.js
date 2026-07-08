@@ -5,14 +5,17 @@ const Brand = require('../models/Brand');
 
 const setFolder = (f) => (req, res, next) => { req.uploadFolder = f; next(); };
 
-router.get('/', async (req, res, next) => {
+// ── Cache Middleware ──────────────────────────────────────
+const setCache = (req, res, next) => { res.set('Cache-Control', 'private, max-age=300'); next(); };
+
+router.get('/', setCache, async (req, res, next) => {
   try {
     const brands = await Brand.find({ isActive: true }).sort({ sortOrder: 1, name: 1 });
     res.json({ success: true, data: brands });
   } catch (err) { next(err); }
 });
 
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', setCache, async (req, res, next) => {
   try {
     const brand = await Brand.findById(req.params.id);
     if (!brand) return res.status(404).json({ success: false, message: 'Brand not found.' });

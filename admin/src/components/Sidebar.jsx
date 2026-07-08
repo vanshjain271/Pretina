@@ -31,6 +31,7 @@ import AccessTimeIcon      from '@mui/icons-material/AccessTime';
 import WarehouseIcon       from '@mui/icons-material/Warehouse';
 import ExpandLessIcon      from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon      from '@mui/icons-material/ExpandMore';
+import { useSelector } from 'react-redux';
 import { logout } from '../store/slices/authSlice';
 
 const ACCENT = '#FF6B00';
@@ -39,49 +40,49 @@ const HOVER  = 'rgba(255,255,255,0.06)';
 const ACTIVE = 'rgba(255,107,0,0.15)';
 
 const NAV = [
-  { type: 'item',  label: 'Dashboard',  icon: <DashboardIcon />,  to: '/', end: true },
+  { type: 'item',  label: 'Dashboard',  icon: <DashboardIcon />,  to: '/', end: true }, // Accessible to everyone
 
-  { type: 'group', label: 'Orders',     icon: <ShoppingCartIcon />, children: [
-    { label: 'Online Orders',    icon: <ShoppingBagIcon />,      to: '/orders' },
-    { label: 'Purchase Orders',  icon: <ReceiptLongIcon />,      to: '/purchase-orders' },
-    { label: 'Abandoned Carts',  icon: <AddShoppingCartIcon />,  to: '/abandoned-carts' },
-    { label: 'Create Order',     icon: <AddShoppingCartIcon />,  to: '/add-order' },
+  { type: 'group', label: 'Orders',     icon: <ShoppingCartIcon />, permissions: ['orders.view', 'orders.edit', 'orders.delete'], children: [
+    { label: 'Online Orders',    icon: <ShoppingBagIcon />,      to: '/orders', permissions: ['orders.view'] },
+    { label: 'Purchase Orders',  icon: <ReceiptLongIcon />,      to: '/purchase-orders', permissions: ['orders.view'] },
+    { label: 'Abandoned Carts',  icon: <AddShoppingCartIcon />,  to: '/abandoned-carts', permissions: ['orders.view'] },
+    { label: 'Create Order',     icon: <AddShoppingCartIcon />,  to: '/add-order', permissions: ['orders.view'] },
   ]},
 
-  { type: 'item',  label: 'Invoices',   icon: <ReceiptLongIcon />, to: '/invoices' },
+  { type: 'item',  label: 'Invoices',   icon: <ReceiptLongIcon />, to: '/invoices', permissions: ['invoices.view'] },
 
-  { type: 'group', label: 'Catalog',    icon: <InventoryIcon />, children: [
-    { label: 'Products',    icon: <InventoryIcon />,         to: '/products' },
-    { label: 'Categories',  icon: <CategoryIcon />,          to: '/categories' },
-    { label: 'Brands',      icon: <BrandingWatermarkIcon />, to: '/brands' },
-    { label: 'Reviews',     icon: <StarIcon />,              to: '/reviews' },
+  { type: 'group', label: 'Catalog',    icon: <InventoryIcon />, permissions: ['products.view', 'categories.view', 'brands.view', 'reviews.view'], children: [
+    { label: 'Products',    icon: <InventoryIcon />,         to: '/products', permissions: ['products.view'] },
+    { label: 'Categories',  icon: <CategoryIcon />,          to: '/categories', permissions: ['categories.view'] },
+    { label: 'Brands',      icon: <BrandingWatermarkIcon />, to: '/brands', permissions: ['brands.view'] },
+    { label: 'Reviews',     icon: <StarIcon />,              to: '/reviews', permissions: ['reviews.view'] },
   ]},
 
-  { type: 'item',  label: 'Customers',  icon: <PeopleIcon />,      to: '/customers' },
-  { type: 'item',  label: 'Employees',  icon: <GroupsIcon />,      to: '/employees' },
+  { type: 'item',  label: 'Customers',  icon: <PeopleIcon />,      to: '/customers', permissions: ['customers.view'] },
+  { type: 'item',  label: 'Employees',  icon: <GroupsIcon />,      to: '/employees', permissions: ['employees.view'] },
 
-  { type: 'group', label: 'Promotions', icon: <CampaignIcon />, children: [
-    { label: 'Coupons', icon: <LocalOfferIcon />, to: '/coupons' },
-    { label: 'Banners', icon: <ImageIcon />,       to: '/banners' },
-    { label: 'Alerts',  icon: <CampaignIcon />,    to: '/alerts' },
+  { type: 'group', label: 'Promotions', icon: <CampaignIcon />, permissions: ['coupons.view', 'banners.view'], children: [
+    { label: 'Coupons', icon: <LocalOfferIcon />, to: '/coupons', permissions: ['coupons.view'] },
+    { label: 'Banners', icon: <ImageIcon />,       to: '/banners', permissions: ['banners.view'] },
+    { label: 'Alerts',  icon: <CampaignIcon />,    to: '/alerts', permissions: ['banners.view'] },
   ]},
 
-  { type: 'group', label: 'Reports',    icon: <BarChartIcon />, children: [
-    { label: 'Overview',    icon: <BarChartIcon />,    to: '/reports' },
-    { label: 'Geo Map',     icon: <LocationOnIcon />,  to: '/analytics/geo' },
-    { label: 'Inventory',   icon: <WarehouseIcon />,   to: '/analytics/inventory' },
-    { label: 'Peak Hours',  icon: <AccessTimeIcon />,  to: '/analytics/peak-hours' },
+  { type: 'group', label: 'Reports',    icon: <BarChartIcon />, permissions: ['reports.view'], children: [
+    { label: 'Overview',    icon: <BarChartIcon />,    to: '/reports', permissions: ['reports.view'] },
+    { label: 'Geo Map',     icon: <LocationOnIcon />,  to: '/analytics/geo', permissions: ['reports.view'] },
+    { label: 'Inventory',   icon: <WarehouseIcon />,   to: '/analytics/inventory', permissions: ['reports.view'] },
+    { label: 'Peak Hours',  icon: <AccessTimeIcon />,  to: '/analytics/peak-hours', permissions: ['reports.view'] },
   ]},
 
   { type: 'divider' },
 
-  { type: 'group', label: 'Online Store', icon: <StorefrontIcon />, children: [
-    { label: 'Store Settings', icon: <SettingsIcon />,       to: '/store-settings' },
-    { label: 'Blog',           icon: <ArticleIcon />,         to: '/blog' },
-    { label: 'Notifications',  icon: <NotificationsIcon />,   to: '/notifications' },
+  { type: 'group', label: 'Online Store', icon: <StorefrontIcon />, permissions: ['settings.view', 'blog.view'], children: [
+    { label: 'Store Settings', icon: <SettingsIcon />,       to: '/store-settings', permissions: ['settings.view'] },
+    { label: 'Blog',           icon: <ArticleIcon />,         to: '/blog', permissions: ['blog.view'] },
+    { label: 'Notifications',  icon: <NotificationsIcon />,   to: '/notifications', permissions: ['settings.view'] },
   ]},
 
-  { type: 'item',  label: 'Activity Log', icon: <HistoryIcon />,   to: '/activity-log' },
+  { type: 'item',  label: 'Activity Log', icon: <HistoryIcon />,   to: '/activity-log', permissions: ['activity.view'] },
 ];
 
 function NavGroup({ item, open: sidebarOpen }) {
@@ -150,6 +151,16 @@ function NavGroup({ item, open: sidebarOpen }) {
 export default function Sidebar({ open, width }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const user = useSelector(s => s.auth.user);
+
+  const isEmployee = user?.role === 'EMPLOYEE';
+  const userPermissions = user?.permissions || [];
+
+  const checkPermission = (itemPermissions) => {
+    if (!isEmployee) return true;
+    if (!itemPermissions || itemPermissions.length === 0) return true;
+    return itemPermissions.some(p => userPermissions.includes(p));
+  };
 
   return (
     <Box
@@ -194,9 +205,15 @@ export default function Sidebar({ open, width }) {
           if (item.type === 'divider') {
             return <Divider key={i} sx={{ my: 1, borderColor: 'rgba(255,255,255,0.08)' }} />;
           }
+
+          if (!checkPermission(item.permissions)) return null;
+
           if (item.type === 'group') {
-            return <NavGroup key={item.label} item={item} open={open} />;
+            const allowedChildren = item.children.filter(child => checkPermission(child.permissions));
+            if (allowedChildren.length === 0) return null;
+            return <NavGroup key={item.label} item={{ ...item, children: allowedChildren }} open={open} />;
           }
+
           return (
             <Tooltip key={item.to} title={!open ? item.label : ''} placement="right">
               <ListItem disablePadding sx={{ mb: 0.5 }}>

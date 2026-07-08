@@ -4,6 +4,7 @@ import { ThemeProvider, createTheme } from '@mui/material';
 import { useSelector } from 'react-redux';
 import Layout from './components/Layout';
 import LoadingScreen from './components/LoadingScreen';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // ── Existing pages ────────────────────────────────────────────────
 const Login           = lazy(() => import('./pages/Login'));
@@ -68,10 +69,7 @@ const theme = createTheme({
   },
 });
 
-const ProtectedRoute = ({ children }) => {
-  const token = useSelector(s => s.auth.token);
-  return token ? children : <Navigate to="/login" replace />;
-};
+// Remove simple ProtectedRoute
 
 export default function App() {
   return (
@@ -87,52 +85,51 @@ export default function App() {
             <Route index element={<Dashboard />} />
 
             {/* ── Orders ── */}
-            <Route path="orders"           element={<Orders />} />
-            <Route path="orders/:id"       element={<OrderDetail />} />
-            <Route path="purchase-orders"  element={<PurchaseOrders />} />
-            <Route path="abandoned-carts"  element={<AbandonedCarts />} />
-            <Route path="add-order"        element={<AddOrder />} />
+            <Route path="orders"           element={<ProtectedRoute permissions={['orders.view']}><Orders /></ProtectedRoute>} />
+            <Route path="orders/:id"       element={<ProtectedRoute permissions={['orders.view']}><OrderDetail /></ProtectedRoute>} />
+            <Route path="purchase-orders"  element={<ProtectedRoute permissions={['orders.view']}><PurchaseOrders /></ProtectedRoute>} />
+            <Route path="abandoned-carts"  element={<ProtectedRoute permissions={['orders.view']}><AbandonedCarts /></ProtectedRoute>} />
+            <Route path="add-order"        element={<ProtectedRoute permissions={['orders.view']}><AddOrder /></ProtectedRoute>} />
 
             {/* ── Invoices ── */}
-            <Route path="invoices"         element={<Invoices />} />
+            <Route path="invoices"         element={<ProtectedRoute permissions={['invoices.view']}><Invoices /></ProtectedRoute>} />
 
             {/* ── Catalog ── */}
-            <Route path="products"         element={<Products />} />
-            <Route path="categories"       element={<Categories />} />
-            <Route path="brands"           element={<Brands />} />
-            <Route path="reviews"          element={<Reviews />} />
+            <Route path="products"         element={<ProtectedRoute permissions={['products.view']}><Products /></ProtectedRoute>} />
+            <Route path="categories"       element={<ProtectedRoute permissions={['categories.view']}><Categories /></ProtectedRoute>} />
+            <Route path="brands"           element={<ProtectedRoute permissions={['brands.view']}><Brands /></ProtectedRoute>} />
+            <Route path="reviews"          element={<ProtectedRoute permissions={['reviews.view']}><Reviews /></ProtectedRoute>} />
 
-            {/* ── Customers ── */}
-            <Route path="customers"        element={<Customers />} />
-            <Route path="customers/:id"    element={<CustomerDetails />} />
-            {/* Legacy /users alias */}
-            <Route path="users"            element={<Navigate to="/customers" replace />} />
-
-            {/* ── Employees ── */}
-            <Route path="employees"        element={<Employees />} />
+            {/* ── Users ── */}
+            <Route path="customers"        element={<ProtectedRoute permissions={['customers.view']}><Customers /></ProtectedRoute>} />
+            <Route path="customers/:id"    element={<ProtectedRoute permissions={['customers.view']}><CustomerDetails /></ProtectedRoute>} />
+            <Route path="users"            element={<ProtectedRoute permissions={['customers.view']}><Users /></ProtectedRoute>} />
+            <Route path="employees"        element={<ProtectedRoute permissions={['employees.view']}><Employees /></ProtectedRoute>} />
 
             {/* ── Promotions ── */}
-            <Route path="coupons"          element={<Coupons />} />
-            <Route path="banners"          element={<Banners />} />
-            <Route path="alerts"           element={<Alerts />} />
-            <Route path="payments"         element={<Payments />} />
+            <Route path="coupons"          element={<ProtectedRoute permissions={['coupons.view']}><Coupons /></ProtectedRoute>} />
+            <Route path="banners"          element={<ProtectedRoute permissions={['banners.view']}><Banners /></ProtectedRoute>} />
+            <Route path="alerts"           element={<ProtectedRoute permissions={['banners.view']}><Alerts /></ProtectedRoute>} />
 
             {/* ── Reports & Analytics ── */}
-            <Route path="reports"          element={<Reports />} />
-            <Route path="analytics/geo"    element={<GeoAnalytics />} />
-            <Route path="analytics/inventory" element={<InventoryAnalytics />} />
-            <Route path="analytics/peak-hours" element={<PeakHours />} />
+            <Route path="reports"          element={<ProtectedRoute permissions={['reports.view']}><Reports /></ProtectedRoute>} />
+            <Route path="analytics/geo"    element={<ProtectedRoute permissions={['reports.view']}><GeoAnalytics /></ProtectedRoute>} />
+            <Route path="analytics/inventory" element={<ProtectedRoute permissions={['reports.view']}><InventoryAnalytics /></ProtectedRoute>} />
+            <Route path="analytics/peak-hours" element={<ProtectedRoute permissions={['reports.view']}><PeakHours /></ProtectedRoute>} />
 
-            {/* ── Online Store ── */}
-            <Route path="store-settings"   element={<StoreSettings />} />
-            <Route path="settings"         element={<Navigate to="/store-settings" replace />} />
-            <Route path="blog"             element={<Blog />} />
-            <Route path="notifications"    element={<Notifications />} />
+            {/* ── Store ── */}
+            <Route path="store-settings"   element={<ProtectedRoute permissions={['settings.view']}><StoreSettings /></ProtectedRoute>} />
+            <Route path="blog"             element={<ProtectedRoute permissions={['blog.view']}><Blog /></ProtectedRoute>} />
+            <Route path="notifications"    element={<ProtectedRoute permissions={['settings.view']}><Notifications /></ProtectedRoute>} />
 
-            {/* ── Activity Log ── */}
-            <Route path="activity-log"     element={<ActivityLog />} />
+            {/* ── Other ── */}
+            <Route path="activity-log"     element={<ProtectedRoute permissions={['activity.view']}><ActivityLog /></ProtectedRoute>} />
+            <Route path="settings"         element={<ProtectedRoute permissions={['settings.view']}><Settings /></ProtectedRoute>} />
+            <Route path="payments"         element={<ProtectedRoute permissions={['settings.view']}><Payments /></ProtectedRoute>} />
+
+            {/* ── Fallback ── */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
     </ThemeProvider>

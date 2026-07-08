@@ -3,12 +3,16 @@ const ctrl = require('../controllers/product.controller');
 const { protect, adminOnly, staffOnly } = require('../middleware/auth');
 const { upload } = require('../services/s3.service');
 
+// ── Cache Middleware ──────────────────────────────────────
+const setListCache = (req, res, next) => { res.set('Cache-Control', 'private, max-age=60'); next(); };
+const setItemCache = (req, res, next) => { res.set('Cache-Control', 'private, max-age=300'); next(); };
+
 // ── Public Routes ─────────────────────────────────────────
 // NOTE: specific routes must come BEFORE /:id
-router.get('/homepage', ctrl.getHomepageProducts);   // Dynamic randomized sections
-router.get('/search',   ctrl.searchProducts);         // Full-text search
-router.get('/',         ctrl.getProducts);             // Paginated list
-router.get('/:id',      ctrl.getProduct);              // Single product
+router.get('/homepage', setListCache, ctrl.getHomepageProducts);   // Dynamic randomized sections
+router.get('/search',   setListCache, ctrl.searchProducts);         // Full-text search
+router.get('/',         setListCache, ctrl.getProducts);             // Paginated list
+router.get('/:id',      setItemCache, ctrl.getProduct);              // Single product
 
 // ── Staff/Admin Routes ────────────────────────────────────
 const setUploadFolder = (folder) => (req, res, next) => {

@@ -5,8 +5,11 @@ const Banner = require('../models/Banner');
 
 const setFolder = (f) => (req, res, next) => { req.uploadFolder = f; next(); };
 
+// ── Cache Middleware ──────────────────────────────────────
+const setCache = (req, res, next) => { res.set('Cache-Control', 'private, max-age=120'); next(); };
+
 // GET active banners (public — used by mobile app)
-router.get('/', async (req, res, next) => {
+router.get('/', setCache, async (req, res, next) => {
   try {
     const now = new Date();
     const query = {
