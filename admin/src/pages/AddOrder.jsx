@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box, Card, CardContent, Typography, TextField, Button, Grid, Autocomplete,
   IconButton, Divider, Stack, CircularProgress, Alert,
@@ -110,20 +110,51 @@ export default function AddOrder() {
     }
   };
 
+  const productOptions = useMemo(() => {
+    const options = [];
+    products.forEach(p => {
+      if (p.hasVariants && p.variants?.length > 0) {
+        p.variants.forEach(v => {
+          options.push({
+            _id: p._id,
+            variantId: v._id,
+            name: p.name,
+            variantName: `${v.name}${v.color ? ` - ${v.color}` : ''}`,
+            displayLabel: `${p.name} - ${v.name}${v.color ? ` (${v.color})` : ''}`,
+            price: v.salePrice || v.mrp || p.salePrice || p.price || 0,
+            image: v.images?.[0] || p.images?.[0]
+          });
+        });
+      } else {
+        options.push({
+          _id: p._id,
+          name: p.name,
+          variantName: '',
+          displayLabel: p.name,
+          price: p.salePrice || p.price || 0,
+          image: p.images?.[0]
+        });
+      }
+    });
+    return options;
+  }, [products]);
+
   const handleAddProduct = () => {
     if (!selectedProduct) return;
     
     // Check if already added
-    const existing = cartItems.find(item => item.productId === selectedProduct._id);
+    const existing = cartItems.find(item => item.productId === selectedProduct._id && item.variantId === selectedProduct.variantId);
     if (existing) {
-      setCartItems(cartItems.map(i => i.productId === selectedProduct._id ? { ...i, quantity: i.quantity + 1 } : i));
+      setCartItems(cartItems.map(i => (i.productId === selectedProduct._id && i.variantId === selectedProduct.variantId) ? { ...i, quantity: i.quantity + 1 } : i));
     } else {
       setCartItems([...cartItems, { 
         productId: selectedProduct._id, 
+        variantId: selectedProduct.variantId,
+        variantName: selectedProduct.variantName,
         name: selectedProduct.name, 
-        price: selectedProduct.salePrice || selectedProduct.price,
+        price: selectedProduct.price,
         quantity: 1,
-        image: selectedProduct.images?.[0] 
+        image: selectedProduct.image 
       }]);
     }
     setSelectedProduct(null);
@@ -192,8 +223,8 @@ export default function AddOrder() {
                 
                 <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
                   <Autocomplete
-                    options={products}
-                    getOptionLabel={(option) => `${option.name} (₹${option.salePrice || option.price})`}
+                    options={productOptions}
+                    getOptionLabel={(option) => `${option.displayLabel} (₹${option.price})`}
                     value={selectedProduct}
                     onChange={(e, val) => setSelectedProduct(val)}
                     fullWidth
@@ -214,6 +245,7 @@ export default function AddOrder() {
                         )}
                         <Box sx={{ flex: 1 }}>
                           <Typography fontWeight={600} fontSize={14}>{item.name}</Typography>
+                          {item.variantName && <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{item.variantName}</Typography>}
                           <Typography color="text.secondary" fontSize={13}>₹{item.price}</Typography>
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
