@@ -553,7 +553,7 @@ export default function Orders() {
       {editDialog && (
         <Dialog open onClose={() => setEditDialog(null)} maxWidth="md" fullWidth>
           <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Edit /> Edit Order: {editDialog.orderNumber}
+            <EditIcon sx={{ mr: 1 }} /> Edit Order: {editDialog.orderNumber}
           </DialogTitle>
           <DialogContent>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -687,12 +687,13 @@ export default function Orders() {
         order={drawerOrder} 
         open={Boolean(drawerOrder)}
         onClose={() => setDrawerOrder(null)} 
-        onEditStatus={() => { 
+        onEditStatus={(order) => { 
+          const o = order || drawerOrder;
           setDrawerOrder(null);
-          // In Pretina, status update is usually bulk, but we can do a prompt or open a specific dialog if needed.
-          // For now, let's keep it simple or trigger bulk update for this 1 item.
-          setSelectedIds([drawerOrder._id]);
-          toast('Select a new status from the dropdown', { icon: '👆' });
+          if (o?._id) {
+            setSelectedIds([o._id]);
+            toast('Select a new status from the bulk dropdown above ☝️', { icon: '👆' });
+          }
         }}
         onEditOrder={() => openEditDialog(drawerOrder)}
         onPrintInvoice={() => downloadInvoice(drawerOrder)}

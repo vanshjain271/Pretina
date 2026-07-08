@@ -24,40 +24,55 @@ const fmtDate = (d) => {
 
 const normalizeInvoice = (raw) => {
   if (!raw) return {};
-  const order = raw.order || {};
-  const user = raw.user || {};
-  const addr = raw.shippingAddress || {};
 
-  const invoiceNumber = raw.invoiceNumber || (order.orderNumber ? order.orderNumber.replace(/^ORD-/, 'INV-') : 'INV-DRAFT');
-  const orderNumber = raw.orderNumber || order.orderNumber || '-';
+  // Support both direct Order object and { order: ... } wrapper
+  const order = raw.orderNumber ? raw : (raw.order || {});
+  const user = raw.user || order.user || {};
+  const addr = raw.shippingAddress || order.shippingAddress || {};
 
-  const customerName = addr.name || user.name || raw.customerName || '-';
-  const customerPhone = addr.phone || user.phone || raw.customerPhone || '-';
+  const invoiceNumber = (order.orderNumber || raw.orderNumber || 'DRAFT').replace(/^PRE-/, 'INV-');
+  const orderNumber = order.orderNumber || raw.orderNumber || '-';
 
-  const addressStr = typeof addr === 'string' ? addr : [addr.line1, addr.line2, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
+  const customerName = addr.name || (typeof user === 'object' ? user.name : '') || '-';
+  const customerPhone = addr.phone || (typeof user === 'object' ? user.phone : '') || '-';
 
-  const grandTotal = Number(raw.grandTotal || order.total || 0);
-  const shipping = Number(raw.shipping || order.deliveryFee || 0);
-  const discount = Number(raw.discount || order.discount || 0);
-  const tokenReceived = Number(raw.tokenReceived || order.tokenReceived || 0);
+  const addressStr = typeof addr === 'string'
+    ? addr
+    : [addr.line1, addr.line2, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
+
+  const grandTotal = Number(order.total || raw.total || 0);
+  const shipping = Number(order.deliveryFee || raw.deliveryFee || 0);
+  const discount = Number(order.discount || raw.discount || 0);
+  const tokenReceived = Number(order.tokenReceived || raw.tokenReceived || 0);
   const balance = Math.max(0, grandTotal - tokenReceived);
 
-  const items = (raw.items || order.items || []).map((item) => ({
-    name: item.name || 'Product',
+  const sourceItems = order.items || raw.items || [];
+  const items = sourceItems.map((item) => ({
+    name: item.name || item.product?.name || 'Product',
     variantName: item.variantName || '',
     quantity: Number(item.quantity || 0),
     mrp: Number(item.mrp || item.price || 0),
     price: Number(item.price || 0),
-    total: Number(item.total || Number(item.price || 0) * Number(item.quantity || 0)),
+    total: Number(item.total || (Number(item.price || 0) * Number(item.quantity || 0))),
   }));
 
   return {
-    invoiceNumber, orderNumber, invoiceDate: raw.createdAt || order.createdAt || new Date(),
-    customerName, customerPhone, addressStr,
-    grandTotal, shipping, discount, tokenReceived, balance, items,
-    payment: order.paymentMethod || '-',
+    invoiceNumber,
+    orderNumber,
+    invoiceDate: order.createdAt || raw.createdAt || new Date(),
+    customerName,
+    customerPhone,
+    addressStr,
+    grandTotal,
+    shipping,
+    discount,
+    tokenReceived,
+    balance,
+    items,
+    payment: order.paymentMethod || raw.paymentMethod || '-',
   };
 };
+
 
 const generateInvoicePDF = (rawInvoice) => {
   return new Promise((resolve, reject) => {

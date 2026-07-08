@@ -452,7 +452,8 @@ router.get('/:id/invoice-pdf', protect, staffOnly, async (req, res, next) => {
       .lean();
     if (!order) return res.status(404).send('Order not found');
 
-    const pdfBuffer = await generateInvoicePDF({ order });
+    // Pass order directly — normalizeInvoice handles both raw order and { order: ... } format
+    const pdfBuffer = await generateInvoicePDF(order);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="invoice-${order.orderNumber}.pdf"`);
     res.send(pdfBuffer);
