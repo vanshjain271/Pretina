@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Card, CardContent, Typography, TextField, Button, Grid, Autocomplete,
-  IconButton, Divider, Stack, CircularProgress, Alert
+  IconButton, Divider, Stack, CircularProgress, Alert,
+  Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import { useNavigate } from 'react-router-dom';
-import { getCustomers, getProducts, createManualOrder } from '../api/endpoints';
+import { getCustomers, getProducts, createManualOrder, createCustomer } from '../api/endpoints';
 import toast from 'react-hot-toast';
 
 export default function AddOrder() {
@@ -16,6 +18,11 @@ export default function AddOrder() {
 
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
+
+  // New Customer Form State
+  const [customerDialog, setCustomerDialog] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', email: '', city: '', state: '' });
+  const [creatingCustomer, setCreatingCustomer] = useState(false);
 
   // Form State
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -63,6 +70,43 @@ export default function AddOrder() {
         pincode: val.addresses?.[0]?.pincode || '',
         country: val.addresses?.[0]?.country || 'India'
       });
+    }
+  };
+
+  const handleCreateCustomer = async (e) => {
+    e.preventDefault();
+    if (!newCustomer.phone) return toast.error('Phone number is required');
+    
+    setCreatingCustomer(true);
+    try {
+      const payload = {
+        name: newCustomer.name,
+        phone: newCustomer.phone,
+        email: newCustomer.email,
+        addresses: [{
+          isDefault: true,
+          name: newCustomer.name,
+          phone: newCustomer.phone,
+          city: newCustomer.city,
+          state: newCustomer.state,
+          country: 'India'
+        }]
+      };
+      
+      const res = await createCustomer(payload);
+      const createdUser = res.data.data;
+      
+      // Add to list and auto-select
+      setCustomers([createdUser, ...customers]);
+      handleSelectCustomer(createdUser);
+      
+      toast.success('Customer created successfully!');
+      setCustomerDialog(false);
+      setNewCustomer({ name: '', phone: '', email: '', city: '', state: '' });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to create customer');
+    } finally {
+      setCreatingCustomer(false);
     }
   };
 
@@ -218,7 +262,12 @@ export default function AddOrder() {
             {/* Customer Selection */}
             <Card>
               <CardContent>
-                <Typography variant="subtitle1" fontWeight={700} mb={2}>Select Customer</Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="subtitle1" fontWeight={700}>Select Customer</Typography>
+                  <Button size="small" startIcon={<PersonAddIcon />} onClick={() => setCustomerDialog(true)}>
+                    New Customer
+                  </Button>
+                </Box>
                 <Autocomplete
                   options={customers}
                   getOptionLabel={(option) => `${option.name} (${option.phone})`}
@@ -318,6 +367,37 @@ export default function AddOrder() {
           </Stack>
         </Grid>
       </Grid>
+
+      {/* New Customer Dialog */}
+      <Dialog open={customerDialog} onClose={() => setCustomerDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Create New Customer</DialogTitle>
+        <form onSubmit={handleCreateCustomer}>
+          <DialogContent>
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              <TextField label="Full Name" size="small" fullWidth value={newCustomer.name} onChange={e => setNewCustomer(p => ({...p, name: e.target.value}))} required />
+              <TextField label="Phone Number" size="small" fullWidth value={newCustomer.phone} onChange={e => setNewCustomer(p => ({...p, phone: e.target.value}))} required />
+              <TextField label="Email Address (Optional)" type="email" size="small" fullWidth value={newCustomer.email} onChange={e => setNewCustomer(p => ({...p, email: e.target.value}))} />
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <TextField label="City" size="small" fullWidth value={newCustomer.city} onChange={e => setNewCustomer(p => ({...p, city: e.target.value}))} />
+                </Grid>
+                <Grid item xs={6}>
+                  <TextField label="State" size="small" fullWidth value={newCustomer.state} onChange={e => setNewCustomer(p => ({...p, state: e.target.value}))} />
+                </Grid>
+              </Grid>
+              <Typography variant="caption" color="text.secondary">
+                The customer can later log into the app directly using this phone number.
+              </Typography>
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setCustomerDialog(false)}>Cancel</Button>
+            <Button type="submit" variant="contained" disabled={creatingCustomer}>
+              {creatingCustomer ? 'Creating...' : 'Create Customer'}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
     </Box>
   );
 }

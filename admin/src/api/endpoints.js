@@ -49,6 +49,7 @@ export const getPackingSlipPDF = (id) => api.get(`/orders/${id}/packing-slip`, {
 // ── Customers ─────────────────────────────────────────────────────
 export const getCustomers = (params) => api.get('/users', { params });
 export const getCustomer = (id) => api.get(`/users/${id}`);
+export const createCustomer = (data) => api.post('/users', data);
 export const updateCustomer = (id, data) => api.put(`/users/${id}`, data);
 export const toggleCustomerStatus = (id) => api.patch(`/users/${id}/toggle`);
 

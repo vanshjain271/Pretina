@@ -92,6 +92,28 @@ router.get('/', protect, adminOnly, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// POST create new customer (manual) — Admin only
+router.post('/', protect, adminOnly, async (req, res, next) => {
+  try {
+    const { name, phone, email, addresses } = req.body;
+    if (!phone) return res.status(400).json({ success: false, message: 'Phone number is required.' });
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ phone });
+    if (existingUser) return res.status(400).json({ success: false, message: 'User with this phone number already exists.' });
+
+    const user = await User.create({
+      name: name || 'Pretina User',
+      phone,
+      email: email || '',
+      role: 'customer',
+      addresses: addresses || []
+    });
+
+    res.status(201).json({ success: true, data: user });
+  } catch (err) { next(err); }
+});
+
 // GET single user — Admin only
 router.get('/:id', protect, adminOnly, async (req, res, next) => {
   try {
