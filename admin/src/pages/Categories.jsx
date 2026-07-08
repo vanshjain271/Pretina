@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Card, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch, FormControlLabel, CircularProgress } from '@mui/material';
+import { Box, Card, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch, FormControlLabel, CircularProgress, Select, MenuItem, InputLabel, FormControl } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import toast from 'react-hot-toast';
 import { getCategories, createCategory, updateCategory, deleteCategory } from '../api/endpoints';
 
@@ -74,21 +75,57 @@ export default function Categories() {
         </TableContainer>
       </Card>
 
-      <Dialog open={!!dialog} onClose={() => setDialog(null)} maxWidth="sm" fullWidth>
-        <DialogTitle>{dialog === 'add' ? 'Add Category' : 'Edit Category'}</DialogTitle>
-        <DialogContent>
-          <TextField fullWidth label="Name *" size="small" value={form.name || ''} onChange={e => setForm(p => ({...p, name: e.target.value}))} sx={{ mt: 1, mb: 2 }} />
-          <TextField fullWidth label="Description" size="small" value={form.description || ''} onChange={e => setForm(p => ({...p, description: e.target.value}))} sx={{ mb: 2 }} />
-          <FormControlLabel control={<Switch checked={!!form.isActive} onChange={e => setForm(p => ({...p, isActive: e.target.checked}))} />} label="Active" sx={{ mb: 2 }} />
-          <Button variant="outlined" component="label" size="small">
-            {preview ? 'Change Image' : 'Upload Image'}
+      <Dialog open={!!dialog} onClose={() => setDialog(null)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>{dialog === 'add' ? 'Add Category' : 'Edit Category'}</DialogTitle>
+        <DialogContent sx={{ px: 3 }}>
+          {/* Image Upload Area */}
+          <Box sx={{
+            border: '2px dashed #e0e0e0',
+            borderRadius: 2,
+            p: 3,
+            textAlign: 'center',
+            mb: 3,
+            mt: 1,
+            cursor: 'pointer',
+            '&:hover': { borderColor: '#1976d2', bgcolor: '#f5f9ff' },
+            position: 'relative'
+          }} component="label">
+            {preview ? (
+              <img src={preview} alt="" style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 8 }} />
+            ) : (
+              <Box>
+                <CloudUploadIcon sx={{ fontSize: 40, color: '#9e9e9e', mb: 1 }} />
+                <Typography variant="body2" color="primary" fontWeight={600}>Upload Photo</Typography>
+              </Box>
+            )}
             <input type="file" hidden accept="image/*" onChange={e => { const f = e.target.files[0]; if(f){setImgFile(f); setPreview(URL.createObjectURL(f));} }} />
-          </Button>
-          {preview && <Box sx={{ mt: 1 }}><img src={preview} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8 }} /></Box>}
+          </Box>
+
+          <TextField fullWidth label="Category Name *" size="small" value={form.name || ''} onChange={e => setForm(p => ({...p, name: e.target.value}))} sx={{ mb: 2 }} />
+          
+          <TextField fullWidth label="Description" size="small" multiline rows={3} value={form.description || ''} onChange={e => setForm(p => ({...p, description: e.target.value}))} sx={{ mb: 2 }} />
+          
+          <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+            <InputLabel>Parent Category (Optional)</InputLabel>
+            <Select
+              label="Parent Category (Optional)"
+              value={form.parentCategory || ''}
+              onChange={e => setForm(p => ({...p, parentCategory: e.target.value}))}
+            >
+              <MenuItem value=""><em>None</em></MenuItem>
+              {items.filter(c => c._id !== form._id).map(c => (
+                <MenuItem key={c._id} value={c._id}>{c.name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControlLabel control={<Switch color="primary" checked={!!form.isActive} onChange={e => setForm(p => ({...p, isActive: e.target.checked}))} />} label="Active" sx={{ mb: 1 }} />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialog(null)}>Cancel</Button>
-          <Button variant="contained" onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setDialog(null)} sx={{ color: '#1976d2' }}>Cancel</Button>
+          <Button variant="contained" onClick={handleSave} disabled={saving} sx={{ bgcolor: '#1976d2', '&:hover': { bgcolor: '#1565c0' }, borderRadius: 1.5, px: 3, textTransform: 'none' }}>
+            {saving ? 'Saving...' : (dialog === 'add' ? 'Create' : 'Save')}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
