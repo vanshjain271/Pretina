@@ -34,4 +34,9 @@ router.put(
 
 router.delete('/:id', protect, adminOnly, ctrl.deleteProduct);
 
+// ── Additional Admin Routes ───────────────────────────────
+router.post('/:id/duplicate', protect, staffOnly, ctrl.duplicateProduct);    // Clone a product
+router.get('/admin/low-stock', protect, staffOnly, ctrl.getLowStockProducts); // Low stock alert
+
 module.exports = router;
+
