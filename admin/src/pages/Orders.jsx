@@ -107,7 +107,15 @@ export default function Orders() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(page); }, [page, tabIndex, filters.paymentMethod, filters.paymentStatus, filters.dateFrom, filters.dateTo]);
+  const [debouncedSearch, setDebouncedSearch] = useState(filters.search);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(filters.search);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [filters.search]);
+
+  useEffect(() => { load(page); }, [page, tabIndex, filters.paymentMethod, filters.paymentStatus, filters.dateFrom, filters.dateTo, debouncedSearch]);
 
   const debouncedSearchProducts = useMemo(() => {
     let timeoutId;
