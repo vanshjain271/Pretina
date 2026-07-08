@@ -15,6 +15,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { getAbandonedCarts, dismissAbandonedCart } from '../api/endpoints';
 import toast from 'react-hot-toast';
+import TimeframeFilter from '../components/TimeframeFilter';
 
 dayjs.extend(relativeTime);
 
@@ -23,11 +24,17 @@ export default function AbandonedCarts() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedCart, setSelectedCart] = useState(null);
+  
+  const [timeframe, setTimeframe] = useState('all_time');
+  const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
 
   const fetchCarts = async () => {
     setLoading(true);
     try { 
-      const r = await getAbandonedCarts(); 
+      const params = {};
+      if (dateRange.startDate) params.dateFrom = dateRange.startDate;
+      if (dateRange.endDate) params.dateTo = dateRange.endDate;
+      const r = await getAbandonedCarts(params); 
       setCarts(r.data.data || []); 
     } catch(e) {
       console.error(e);
@@ -38,7 +45,7 @@ export default function AbandonedCarts() {
 
   useEffect(() => { 
     fetchCarts();
-  }, []);
+  }, [dateRange]);
 
   const filteredCarts = carts.filter(c => {
     const term = search.toLowerCase();
@@ -119,19 +126,28 @@ export default function AbandonedCarts() {
       {/* Main Table Card */}
       <Card sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
         <CardContent sx={{ pb: 0, display: 'flex', justifyContent: 'space-between' }}>
-          <TextField
-            size="small"
-            placeholder="Search by name or phone..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            sx={{ minWidth: 300 }}
-            InputProps={{ sx: { borderRadius: 2 } }}
-          />
+          <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+            <TextField
+              size="small"
+              placeholder="Search by name or phone..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              sx={{ minWidth: 300 }}
+              InputProps={{ sx: { borderRadius: 2 } }}
+            />
+            <TimeframeFilter 
+              value={timeframe} 
+              onChange={({ timeframe, startDate, endDate }) => {
+                setTimeframe(timeframe);
+                setDateRange({ startDate, endDate });
+              }} 
+            />
+          </Stack>
           <Button 
             variant="outlined" 
             startIcon={<RefreshIcon />} 
             onClick={fetchCarts}
-            sx={{ borderRadius: 2, textTransform: 'none' }}
+            sx={{ borderRadius: 2, textTransform: 'none', height: 40 }}
           >
             Refresh
           </Button>

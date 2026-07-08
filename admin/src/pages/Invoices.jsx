@@ -12,6 +12,7 @@ import VisibilityIcon   from '@mui/icons-material/Visibility';
 import FilterListIcon   from '@mui/icons-material/FilterList';
 import { useNavigate }  from 'react-router-dom';
 import { getInvoices, generateInvoice } from '../api/endpoints';
+import TimeframeFilter from '../components/TimeframeFilter';
 
 const STATUS_COLORS = {
   issued: 'primary', paid: 'success', draft: 'default', cancelled: 'error',
@@ -23,13 +24,20 @@ export default function Invoices() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
+  
+  const [timeframe, setTimeframe] = useState('all_time');
+  const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
+  
   const navigate = useNavigate();
   const LIMIT = 20;
 
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await getInvoices({ page, limit: LIMIT, search: search || undefined });
+      const params = { page, limit: LIMIT, search: search || undefined };
+      if (dateRange.startDate) params.dateFrom = dateRange.startDate;
+      if (dateRange.endDate) params.dateTo = dateRange.endDate;
+      const res = await getInvoices(params);
       setInvoices(res.data.data || []);
       setTotal(res.data.pagination?.total || 0);
     } catch (e) {
@@ -37,7 +45,7 @@ export default function Invoices() {
     } finally {
       setLoading(false);
     }
-  }, [page, search]);
+  }, [page, search, dateRange]);
 
   useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
 
@@ -68,6 +76,14 @@ export default function Invoices() {
               sx={{ flex: 1 }}
               InputProps={{
                 startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: 'text.secondary' }} /></InputAdornment>,
+              }}
+            />
+            <TimeframeFilter
+              value={timeframe}
+              onChange={({ timeframe: tf, startDate, endDate }) => {
+                setTimeframe(tf);
+                setDateRange({ startDate, endDate });
+                setPage(1);
               }}
             />
             <Tooltip title="Refresh">

@@ -18,6 +18,7 @@ import OrderDrawer from '../components/OrderDrawer';
 import { getOrders, confirmQrPayment, updateOrderCourier, bulkUpdateOrderStatus, editOrder } from '../api/endpoints';
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
+import TimeframeFilter from '../components/TimeframeFilter';
 
 const STATUS_COLORS = {
   pending: 'warning', confirmed: 'info', packed: 'info',
@@ -40,6 +41,8 @@ export default function Orders() {
   // Filtering & Tabs
   const [tabIndex, setTabIndex] = useState(0); // 0=All, 1=Pending, 2=Ready to Ship, 3=Shipped, 4=Delivered
   const [filters, setFilters] = useState({ paymentMethod: '', paymentStatus: '', search: '', dateFrom: '', dateTo: '' });
+  const [timeframe, setTimeframe] = useState('all_time');
+  const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
   
   // Bulk Actions
   const [selectedIds, setSelectedIds] = useState([]);
@@ -193,23 +196,13 @@ export default function Orders() {
                 onChange={e => { setFilters(p => ({ ...p, search: e.target.value })); setPage(1); }}
                 sx={{ bgcolor: '#fff', minWidth: 200, flex: 1, maxWidth: 250 }}
               />
-              <TextField
-                type="date"
-                size="small"
-                label="From Date"
-                InputLabelProps={{ shrink: true }}
-                value={filters.dateFrom}
-                onChange={e => { setFilters(p => ({ ...p, dateFrom: e.target.value })); setPage(1); }}
-                sx={{ bgcolor: '#fff', minWidth: 140 }}
-              />
-              <TextField
-                type="date"
-                size="small"
-                label="To Date"
-                InputLabelProps={{ shrink: true }}
-                value={filters.dateTo}
-                onChange={e => { setFilters(p => ({ ...p, dateTo: e.target.value })); setPage(1); }}
-                sx={{ bgcolor: '#fff', minWidth: 140 }}
+              <TimeframeFilter
+                value={timeframe}
+                onChange={({ timeframe: tf, startDate, endDate }) => {
+                  setTimeframe(tf);
+                  setFilters(p => ({ ...p, dateFrom: startDate, dateTo: endDate }));
+                  setPage(1);
+                }}
               />
               <FormControl size="small" sx={{ minWidth: 120, bgcolor: '#fff' }}>
                 <InputLabel>Payment</InputLabel>

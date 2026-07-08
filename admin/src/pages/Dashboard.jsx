@@ -17,6 +17,7 @@ import {
   Tooltip as ChartTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from 'recharts';
 import { getDashboardOverview } from '../api/endpoints';
+import TimeframeFilter from '../components/TimeframeFilter';
 
 const COLORS = ['#FF6B00', '#1A1A2E', '#4CAF50', '#2196F3', '#FF5722', '#9C27B0'];
 
@@ -102,19 +103,10 @@ export default function Dashboard() {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <TextField
-            select
-            size="small"
+          <TimeframeFilter
             value={period}
-            onChange={(e) => setPeriod(e.target.value)}
-            sx={{ minWidth: 150, bgcolor: '#fff' }}
-          >
-            <MenuItem value="today">Today</MenuItem>
-            <MenuItem value="last7days">Last 7 Days</MenuItem>
-            <MenuItem value="last30days">Last 30 Days</MenuItem>
-            <MenuItem value="thisMonth">This Month</MenuItem>
-            <MenuItem value="lastMonth">Last Month</MenuItem>
-          </TextField>
+            onChange={({ timeframe }) => setPeriod(timeframe)}
+          />
           <Tooltip title="Refresh">
             <IconButton onClick={fetchData} disabled={loading} sx={{ bgcolor: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
               <RefreshIcon />

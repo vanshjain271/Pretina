@@ -223,11 +223,21 @@ router.get('/', protect, staffOnly, async (req, res, next) => {
 // GET /orders/abandoned  — abandoned carts
 router.get('/abandoned', protect, staffOnly, async (req, res, next) => {
   try {
+    const { dateFrom, dateTo } = req.query;
     const thresholdTime = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const carts = await Cart.find({
+    
+    const filter = {
       'items.0': { $exists: true },
       updatedAt: { $lt: thresholdTime },
-    })
+    };
+
+    if (dateFrom || dateTo) {
+      filter.updatedAt = { $lt: thresholdTime }; // Base rule
+      if (dateFrom) filter.updatedAt.$gte = new Date(dateFrom);
+      if (dateTo) filter.updatedAt.$lte = new Date(dateTo); // Overwrite $lt if dateTo is earlier
+    }
+
+    const carts = await Cart.find(filter)
       .populate('user', 'name phone email')
       .populate('items.product', 'name price images')
       .sort({ updatedAt: -1 })
