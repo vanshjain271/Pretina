@@ -10,6 +10,8 @@ export const getProduct = (id) => api.get(`/products/${id}`);
 export const createProduct = (data) => api.post('/products', data);
 export const updateProduct = (id, data) => api.put(`/products/${id}`, data);
 export const deleteProduct = (id) => api.delete(`/products/${id}`);
+export const duplicateProduct = (id) => api.post(`/products/${id}/duplicate`);
+export const getLowStockProducts = () => api.get('/products/admin/low-stock');
 
 // ── Categories ────────────────────────────────────────────────────
 export const getCategories = () => api.get('/categories');
@@ -27,8 +29,11 @@ export const deleteBrand = (id) => api.delete(`/brands/${id}`);
 export const getOrders = (params) => api.get('/orders', { params });
 export const getOrder = (id) => api.get(`/orders/${id}`);
 export const updateOrderStatus = (id, data) => api.patch(`/orders/${id}/status`, data);
+export const editOrder = (id, data) => api.put(`/orders/${id}/edit`, data);
+export const bulkUpdateOrderStatus = (data) => api.post('/orders/bulk-status', data);
 export const updateOrderCourier = (id, data) => api.patch(`/orders/${id}/courier`, data);
 export const updateOrderToken = (id, data) => api.patch(`/orders/${id}/token`, data);
+export const deleteOrder = (id) => api.delete(`/orders/${id}`);
 export const exportOrdersCSV = (params) => api.get('/orders/export', { params, responseType: 'blob' });
 export const getAbandonedCarts = (params) => api.get('/orders/abandoned', { params });
 export const createManualOrder = (data) => api.post('/orders/manual', data);
@@ -101,7 +106,8 @@ export const updateBlog = (id, data) => api.put(`/blog/${id}`, data);
 export const deleteBlog = (id) => api.delete(`/blog/${id}`);
 
 // ── Notifications ─────────────────────────────────────────────────
-export const sendNotification = (data) => api.post('/notifications/send', data);
+// NOTE: Route is POST /notifications (not /notifications/send)
+export const sendNotification = (data) => api.post('/notifications', data);
 export const getNotificationHistory = (params) => api.get('/notifications', { params });
 
 // ── Activity Log ──────────────────────────────────────────────────
