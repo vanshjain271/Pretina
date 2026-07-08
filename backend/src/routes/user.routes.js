@@ -92,4 +92,36 @@ router.get('/', protect, adminOnly, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET single user — Admin only
+router.get('/:id', protect, adminOnly, async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    res.json({ success: true, data: user });
+  } catch (err) { next(err); }
+});
+
+// PUT update user (Customer Details Edit) — Admin only
+router.put('/:id', protect, adminOnly, async (req, res, next) => {
+  try {
+    const allowedFields = ['name', 'phone', 'email', 'type', 'gstNo', 'isAffiliate', 'blockCod'];
+    const update = {};
+    allowedFields.forEach(f => { if (req.body[f] !== undefined) update[f] = req.body[f]; });
+    const user = await User.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true });
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    res.json({ success: true, data: user });
+  } catch (err) { next(err); }
+});
+
+// PATCH toggle user status — Admin only
+router.patch('/:id/toggle', protect, adminOnly, async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    user.isActive = !user.isActive;
+    await user.save();
+    res.json({ success: true, data: user });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
