@@ -36,6 +36,7 @@ export const updateOrderToken = (id, data) => api.patch(`/orders/${id}/token`, d
 export const deleteOrder = (id) => api.delete(`/orders/${id}`);
 export const exportOrdersCSV = (params) => api.get('/orders/export', { params, responseType: 'blob' });
 export const getAbandonedCarts = (params) => api.get('/orders/abandoned', { params });
+export const dismissAbandonedCart = (id) => api.delete(`/orders/abandoned/${id}`);
 export const createManualOrder = (data) => api.post('/orders/manual', data);
 
 // ── Invoices ──────────────────────────────────────────────────────

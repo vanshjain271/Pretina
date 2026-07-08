@@ -13,7 +13,8 @@ import {
 } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { getAbandonedCarts } from '../api/endpoints';
+import { getAbandonedCarts, dismissAbandonedCart } from '../api/endpoints';
+import toast from 'react-hot-toast';
 
 dayjs.extend(relativeTime);
 
@@ -59,6 +60,21 @@ export default function AbandonedCarts() {
     const message = `Hi ${name},\nWe noticed you left ${itemsCount} item(s) in your Pretina cart. Let us know if you need any help completing your purchase!`;
     const url = `https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
+  };
+
+  const handleDismiss = async (cartId) => {
+    if (!window.confirm('Are you sure you want to dismiss this abandoned cart?')) return;
+    
+    try {
+      const res = await dismissAbandonedCart(cartId);
+      if (res.data.success) {
+        toast.success('Abandoned cart dismissed');
+        setCarts(prev => prev.filter(c => c._id !== cartId));
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to dismiss cart');
+    }
   };
 
   return (
@@ -198,6 +214,7 @@ export default function AbandonedCarts() {
                             variant="outlined" 
                             startIcon={<DeleteOutlineIcon />}
                             color="inherit"
+                            onClick={() => handleDismiss(c._id)}
                             sx={{ borderRadius: 2, textTransform: 'none' }}
                           >
                             Dismiss

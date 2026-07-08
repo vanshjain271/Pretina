@@ -236,6 +236,15 @@ router.get('/abandoned', protect, staffOnly, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// DELETE /orders/abandoned/:id  — dismiss abandoned cart
+router.delete('/abandoned/:id', protect, staffOnly, async (req, res, next) => {
+  try {
+    const cart = await Cart.findByIdAndDelete(req.params.id);
+    if (!cart) return res.status(404).json({ success: false, message: 'Cart not found' });
+    res.json({ success: true, message: 'Abandoned cart dismissed' });
+  } catch (err) { next(err); }
+});
+
 // GET /orders/export  — CSV export
 router.get('/export', protect, staffOnly, async (req, res, next) => {
   try {
