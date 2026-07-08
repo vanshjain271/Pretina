@@ -4,15 +4,18 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   MenuItem, Select, FormControl, InputLabel, CircularProgress,
   Pagination, Dialog, DialogTitle, DialogContent, DialogActions,
-  Tabs, Tab, Checkbox, Stack, Tooltip, IconButton,
+  Tabs, Tab, Checkbox, Stack, Tooltip, IconButton, Menu
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DownloadIcon from '@mui/icons-material/Download';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import EditIcon from '@mui/icons-material/Edit';
 import { useNavigate } from 'react-router-dom';
-import { getOrders, confirmQrPayment, updateOrderCourier } from '../api/endpoints';
+import OrderDrawer from '../components/OrderDrawer';
+import { getOrders, confirmQrPayment, updateOrderCourier, bulkUpdateOrderStatus, editOrder } from '../api/endpoints';
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
 
@@ -36,20 +39,26 @@ export default function Orders() {
   
   // Filtering & Tabs
   const [tabIndex, setTabIndex] = useState(0); // 0=All, 1=Pending, 2=Ready to Ship, 3=Shipped, 4=Delivered
-  const [filters, setFilters] = useState({ paymentMethod: '', paymentStatus: '', search: '' });
+  const [filters, setFilters] = useState({ paymentMethod: '', paymentStatus: '', search: '', dateFrom: '', dateTo: '' });
   
   // Bulk Actions
   const [selectedIds, setSelectedIds] = useState([]);
+  const [anchorEl, setAnchorEl] = useState(null);
   
   // Dialogs
   const [qrDialog, setQrDialog] = useState(null);
   const [courierDialog, setCourierDialog] = useState(null);
   const [courierForm, setCourierForm] = useState({ courierName: '', trackingNumber: '', trackingUrl: '' });
+  const [editDialog, setEditDialog] = useState(null);
+  const [editForm, setEditForm] = useState({ discount: 0, deliveryFee: 0, tokenReceived: 0, adminNote: '' });
+  
+  // Drawer State
+  const [drawerOrderId, setDrawerOrderId] = useState(null);
 
   const getStatusFromTab = (idx) => {
     switch(idx) {
       case 1: return 'pending';
-      case 2: return 'packed'; // Ready to ship
+      case 2: return 'packed';
       case 3: return 'shipped';
       case 4: return 'delivered';
       default: return '';
@@ -72,7 +81,7 @@ export default function Orders() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(page); }, [page, tabIndex, filters.paymentMethod, filters.paymentStatus]);
+  useEffect(() => { load(page); }, [page, tabIndex, filters.paymentMethod, filters.paymentStatus, filters.dateFrom, filters.dateTo]);
 
   // Bulk Selection
   const handleSelectAll = (e) => {
@@ -81,6 +90,18 @@ export default function Orders() {
   };
   const handleSelectOne = (id) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleBulkAction = async (status) => {
+    setAnchorEl(null);
+    if (!status || selectedIds.length === 0) return;
+    try {
+      await bulkUpdateOrderStatus({ orderIds: selectedIds, status });
+      toast.success(`Updated ${selectedIds.length} orders to ${status}`);
+      load(page);
+    } catch (err) {
+      toast.error('Failed to update orders');
+    }
   };
 
   const handleConfirmQr = async (orderId) => {
@@ -105,10 +126,34 @@ export default function Orders() {
     }
   };
 
+  const handleEditOrder = async () => {
+    try {
+      await editOrder(editDialog._id, editForm);
+      toast.success('Order updated successfully');
+      setEditDialog(null);
+      load(page);
+    } catch (err) {
+      toast.error('Failed to update order');
+    }
+  };
+
+  const openEditDialog = (order) => {
+    setEditDialog(order);
+    setEditForm({
+      discount: order.discount || 0,
+      deliveryFee: order.deliveryFee || 0,
+      tokenReceived: order.tokenReceived || 0,
+      adminNote: order.adminNote || '',
+    });
+  };
+
   const handleExportCSV = () => {
     const status = getStatusFromTab(tabIndex);
-    const token = localStorage.getItem('pretina_admin_token');
-    const url = `${import.meta.env.VITE_API_URL}/api/v1/orders/export?status=${status}&token=${token}`;
+    const token = localStorage.getItem('token') || localStorage.getItem('pretina_admin_token');
+    let url = `${import.meta.env.VITE_API_URL || ''}/api/v1/orders/export?token=${token}`;
+    if (status) url += `&status=${status}`;
+    if (filters.dateFrom) url += `&startDate=${filters.dateFrom}`;
+    if (filters.dateTo) url += `&endDate=${filters.dateTo}`;
     window.open(url, '_blank');
   };
 
@@ -140,8 +185,33 @@ export default function Orders() {
         
         <CardContent sx={{ py: 2, background: '#fafafa', borderTop: '1px solid #eee' }}>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Stack direction="row" spacing={2}>
-              <FormControl size="small" sx={{ minWidth: 140, bgcolor: '#fff' }}>
+            <Stack direction="row" spacing={2} sx={{ flex: 1, flexWrap: 'wrap' }}>
+              <TextField 
+                size="small" 
+                placeholder="Search by ID or Name..."
+                value={filters.search}
+                onChange={e => { setFilters(p => ({ ...p, search: e.target.value })); setPage(1); }}
+                sx={{ bgcolor: '#fff', minWidth: 200, flex: 1, maxWidth: 250 }}
+              />
+              <TextField
+                type="date"
+                size="small"
+                label="From Date"
+                InputLabelProps={{ shrink: true }}
+                value={filters.dateFrom}
+                onChange={e => { setFilters(p => ({ ...p, dateFrom: e.target.value })); setPage(1); }}
+                sx={{ bgcolor: '#fff', minWidth: 140 }}
+              />
+              <TextField
+                type="date"
+                size="small"
+                label="To Date"
+                InputLabelProps={{ shrink: true }}
+                value={filters.dateTo}
+                onChange={e => { setFilters(p => ({ ...p, dateTo: e.target.value })); setPage(1); }}
+                sx={{ bgcolor: '#fff', minWidth: 140 }}
+              />
+              <FormControl size="small" sx={{ minWidth: 120, bgcolor: '#fff' }}>
                 <InputLabel>Payment</InputLabel>
                 <Select label="Payment" value={filters.paymentMethod} onChange={e => { setFilters(p => ({ ...p, paymentMethod: e.target.value })); setPage(1); }}>
                   <MenuItem value="">All</MenuItem>
@@ -150,7 +220,7 @@ export default function Orders() {
                   <MenuItem value="cod">COD</MenuItem>
                 </Select>
               </FormControl>
-              <FormControl size="small" sx={{ minWidth: 140, bgcolor: '#fff' }}>
+              <FormControl size="small" sx={{ minWidth: 120, bgcolor: '#fff' }}>
                 <InputLabel>Pay Status</InputLabel>
                 <Select label="Pay Status" value={filters.paymentStatus} onChange={e => { setFilters(p => ({ ...p, paymentStatus: e.target.value })); setPage(1); }}>
                   <MenuItem value="">All</MenuItem>
@@ -164,7 +234,20 @@ export default function Orders() {
             {selectedIds.length > 0 && (
               <Stack direction="row" spacing={1} alignItems="center">
                 <Typography variant="body2" fontWeight={600} color="primary">{selectedIds.length} selected</Typography>
-                <Button size="small" variant="outlined" color="primary">Bulk Actions</Button>
+                <Button 
+                  size="small" variant="contained" color="primary" 
+                  endIcon={<KeyboardArrowDownIcon />}
+                  onClick={(e) => setAnchorEl(e.currentTarget)}
+                >
+                  Update Status
+                </Button>
+                <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
+                  <MenuItem onClick={() => handleBulkAction('confirmed')}>Mark Confirmed</MenuItem>
+                  <MenuItem onClick={() => handleBulkAction('packed')}>Mark Packed</MenuItem>
+                  <MenuItem onClick={() => handleBulkAction('shipped')}>Mark Shipped</MenuItem>
+                  <MenuItem onClick={() => handleBulkAction('delivered')}>Mark Delivered</MenuItem>
+                  <MenuItem onClick={() => handleBulkAction('cancelled')}>Mark Cancelled</MenuItem>
+                </Menu>
               </Stack>
             )}
           </Box>
@@ -210,7 +293,7 @@ export default function Orders() {
                   </TableCell>
                   
                   <TableCell>
-                    <Typography variant="body2" fontWeight={700} color="primary" sx={{ cursor: 'pointer' }} onClick={() => navigate(`/orders/${order._id}`)}>
+                    <Typography variant="body2" fontWeight={700} color="primary" sx={{ cursor: 'pointer' }} onClick={() => setDrawerOrderId(order._id)}>
                       {order.orderNumber}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">{dayjs(order.createdAt).format('DD MMM, h:mm A')}</Typography>
@@ -254,11 +337,16 @@ export default function Orders() {
                   <TableCell>
                     <Stack direction="row" spacing={0.5}>
                       <Tooltip title="View Details">
-                        <IconButton size="small" onClick={() => navigate(`/orders/${order._id}`)}><VisibilityIcon fontSize="small" /></IconButton>
+                        <IconButton size="small" onClick={() => setDrawerOrderId(order._id)}><VisibilityIcon fontSize="small" /></IconButton>
                       </Tooltip>
                       <Tooltip title="Update Tracking">
                         <IconButton size="small" color="primary" onClick={() => { setCourierDialog(order); setCourierForm({ courierName: order.courierName||'', trackingNumber: order.trackingNumber||'', trackingUrl: order.trackingUrl||'' }); }}>
                           <LocalShippingIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Edit Pricing/Token">
+                        <IconButton size="small" color="secondary" onClick={() => openEditDialog(order)}>
+                          <EditIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       {order.paymentMethod === 'qr_upi' && order.paymentStatus === 'advance_paid' && (
@@ -325,6 +413,44 @@ export default function Orders() {
           </DialogActions>
         </Dialog>
       )}
+
+      {/* Edit Order Dialog */}
+      {editDialog && (
+        <Dialog open onClose={() => setEditDialog(null)} maxWidth="sm" fullWidth>
+          <DialogTitle>Edit Order Totals</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              <TextField 
+                label="Discount (₹)" type="number" size="small" fullWidth 
+                value={editForm.discount} onChange={e => setEditForm(f => ({...f, discount: Number(e.target.value)}))} 
+              />
+              <TextField 
+                label="Delivery Fee (₹)" type="number" size="small" fullWidth 
+                value={editForm.deliveryFee} onChange={e => setEditForm(f => ({...f, deliveryFee: Number(e.target.value)}))} 
+              />
+              <TextField 
+                label="Token / Advance Received (₹)" type="number" size="small" fullWidth 
+                value={editForm.tokenReceived} onChange={e => setEditForm(f => ({...f, tokenReceived: Number(e.target.value)}))} 
+              />
+              <TextField 
+                label="Admin Note" size="small" fullWidth multiline rows={2}
+                value={editForm.adminNote} onChange={e => setEditForm(f => ({...f, adminNote: e.target.value}))} 
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEditDialog(null)}>Cancel</Button>
+            <Button variant="contained" onClick={handleEditOrder}>Save Order</Button>
+          </DialogActions>
+        </Dialog>
+      )}
+
+      {/* Order Drawer */}
+      <OrderDrawer 
+        orderId={drawerOrderId} 
+        onClose={() => setDrawerOrderId(null)} 
+        onUpdate={load} 
+      />
     </Box>
   );
 }
