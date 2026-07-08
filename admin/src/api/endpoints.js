@@ -83,7 +83,7 @@ export const getSettings = () => api.get('/settings');
 export const updateSettings = (data) => api.put('/settings', data);
 
 // ── Analytics ─────────────────────────────────────────────────────
-export const getDashboardOverview = () => api.get('/analytics/dashboard');
+export const getDashboardOverview = (params) => api.get('/analytics/dashboard', { params });
 export const getSalesAnalytics = (params) => api.get('/analytics/sales', { params });
 export const getUserAnalytics = (params) => api.get('/analytics/users', { params });
 export const getAbandonedCartAnalytics = (params) => api.get('/analytics/abandoned-carts', { params });

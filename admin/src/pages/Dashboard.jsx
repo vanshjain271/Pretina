@@ -75,9 +75,15 @@ export default function Dashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const params = { period: 'custom' };
-      if (dateRange.startDate) params.dateFrom = dateRange.startDate;
-      if (dateRange.endDate) params.dateTo = dateRange.endDate;
+      const params = {};
+      if (dateRange.startDate && dateRange.endDate) {
+        params.period = 'custom';
+        params.dateFrom = dateRange.startDate;
+        params.dateTo = dateRange.endDate;
+      } else {
+        // If it's all_time or no dates are set
+        params.period = 'all';
+      }
       
       const res = await getDashboardOverview(params);
       setData(res.data.overview);
