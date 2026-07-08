@@ -276,6 +276,43 @@ router.get('/export', protect, staffOnly, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /orders/:id/invoice-pdf  — download invoice PDF  *** MUST be before /:id ***
+router.get('/:id/invoice-pdf', protect, staffOnly, async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate('user', 'name phone email')
+      .populate('items.product', 'name sku images')
+      .lean();
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    const pdfBuffer = await generateInvoicePDF(order);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="invoice-${order.orderNumber}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error('Invoice PDF error:', err);
+    res.status(500).json({ success: false, message: 'Failed to generate invoice' });
+  }
+});
+
+// GET /orders/:id/packing-slip  — download packing slip PDF  *** MUST be before /:id ***
+router.get('/:id/packing-slip', protect, staffOnly, async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate('items.product', 'name sku')
+      .lean();
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    const pdfBuffer = await generatePackingSlipPDF(order);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="packing-slip-${order.orderNumber}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error('Packing Slip PDF error:', err);
+    res.status(500).json({ success: false, message: 'Failed to generate packing slip' });
+  }
+});
+
 // GET /orders/:id  — single order (customer sees own, admin sees all)
 router.get('/:id', protect, async (req, res, next) => {
   try {
@@ -288,6 +325,7 @@ router.get('/:id', protect, async (req, res, next) => {
     res.json({ success: true, data: order });
   } catch (err) { next(err); }
 });
+
 
 // PATCH /orders/:id/status  — update order status + fire notifications
 router.patch('/:id/status', protect, staffOnly, async (req, res, next) => {
@@ -443,43 +481,6 @@ router.delete('/:id', protect, adminOnly, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /orders/:id/invoice-pdf  — download invoice PDF
-router.get('/:id/invoice-pdf', protect, staffOnly, async (req, res, next) => {
-  try {
-    const order = await Order.findById(req.params.id)
-      .populate('user', 'name phone email')
-      .populate('items.product', 'name sku images')
-      .lean();
-    if (!order) return res.status(404).send('Order not found');
-
-    // Pass order directly — normalizeInvoice handles both raw order and { order: ... } format
-    const pdfBuffer = await generateInvoicePDF(order);
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename="invoice-${order.orderNumber}.pdf"`);
-    res.send(pdfBuffer);
-  } catch (err) {
-    console.error('Invoice PDF error:', err);
-    res.status(500).send('Failed to generate invoice');
-  }
-});
-
-// GET /orders/:id/packing-slip  — download packing slip PDF
-router.get('/:id/packing-slip', protect, staffOnly, async (req, res, next) => {
-  try {
-    const order = await Order.findById(req.params.id)
-      .populate('items.product', 'name sku')
-      .lean();
-    if (!order) return res.status(404).send('Order not found');
-
-    const pdfBuffer = await generatePackingSlipPDF(order);
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename="packing-slip-${order.orderNumber}.pdf"`);
-    res.send(pdfBuffer);
-  } catch (err) {
-    console.error('Packing Slip PDF error:', err);
-    res.status(500).send('Failed to generate packing slip');
-  }
-});
 
 // POST /orders/manual  — admin creates manual order for a customer
 router.post('/manual', protect, staffOnly, async (req, res, next) => {
