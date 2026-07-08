@@ -1,6 +1,6 @@
 import React from 'react';
 import { Drawer, Box, Typography, Chip, IconButton, Divider, Avatar, Button } from '@mui/material';
-import { Close, Edit, WhatsApp, Print, OpenInNew, LocationOn, Payment, ShoppingBag, Timeline, DeleteOutline, LocalShipping } from '@mui/icons-material';
+import { Close, Edit, WhatsApp, Print, OpenInNew, LocationOn, Payment, ShoppingBag, Timeline, DeleteOutline, LocalShipping, Inventory, Person } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
 const STATUS_COLORS = {
@@ -238,6 +238,10 @@ export default function OrderDrawer({ order, open, onClose, onEditStatus, onEdit
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button fullWidth variant="outlined" startIcon={<Edit />} onClick={onEditOrder}>Edit Order</Button>
           <Button fullWidth variant="outlined" onClick={onEditStatus}>Update Status</Button>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button fullWidth variant="outlined" color="warning" startIcon={<Print />} onClick={onPrintInvoice}>Invoice PDF</Button>
+          <Button fullWidth variant="outlined" color="secondary" startIcon={<Inventory />} onClick={onPrintPackingSlip}>Packing Slip</Button>
         </Box>
         <Button fullWidth variant="contained" sx={{ bgcolor: '#25D366', '&:hover': { bgcolor: '#1ebe57' } }} startIcon={<WhatsApp />} onClick={handleWhatsApp} disabled={!phone}>
           WhatsApp

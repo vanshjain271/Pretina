@@ -22,7 +22,7 @@ import { useNavigate } from 'react-router-dom';
 import OrderDrawer from '../components/OrderDrawer';
 import { 
   getOrders, confirmQrPayment, updateOrderCourier, bulkUpdateOrderStatus, 
-  editOrder, getInvoicePDF, getPackingSlipPDF, deleteOrder, getProducts 
+  editOrder, deleteOrder, getProducts 
 } from '../api/endpoints';
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
@@ -208,39 +208,80 @@ export default function Orders() {
     }
   };
 
+  // ─── YouthQit pattern: use raw fetch with token (not axios) ─────────────────
+  const getToken = () => localStorage.getItem('pretina_admin_token') || localStorage.getItem('admin_token') || '';
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+
   const downloadInvoice = async (order) => {
     if (!order) return;
     try {
-      const res = await getInvoicePDF(order._id);
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `invoice-${order.orderNumber}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
+      const token = getToken();
+      const endpoint = `${API_BASE}/orders/${order._id}/invoice-pdf`;
+      console.log('[PDF] Invoice request:', endpoint);
+
+      const response = await fetch(endpoint, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        let msg = 'Failed to generate invoice';
+        try { msg = (await response.json()).message || msg; } catch (_) {}
+        throw new Error(msg);
+      }
+
+      const blob = await response.blob();
+      if (blob.size === 0) throw new Error('PDF is empty — please try again');
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice-${order.orderNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
       toast.success('Invoice downloaded!');
     } catch (err) {
-      toast.error('Failed to download invoice');
+      console.error('[PDF] Invoice error:', err);
+      toast.error(err.message || 'Failed to download invoice');
     }
   };
 
   const downloadPackingSlip = async (order) => {
     if (!order) return;
     try {
-      const res = await getPackingSlipPDF(order._id);
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `packing-slip-${order.orderNumber}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
+      const token = getToken();
+      const endpoint = `${API_BASE}/orders/${order._id}/packing-slip`;
+      console.log('[PDF] Packing slip request:', endpoint);
+
+      const response = await fetch(endpoint, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        let msg = 'Failed to download packing slip';
+        try { msg = (await response.json()).message || msg; } catch (_) {}
+        throw new Error(msg);
+      }
+
+      const blob = await response.blob();
+      if (blob.size === 0) throw new Error('Packing slip PDF is empty — please try again');
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `packing-slip-${order.orderNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
       toast.success('Packing slip downloaded!');
     } catch (err) {
-      toast.error('Failed to download packing slip');
+      console.error('[PDF] Packing slip error:', err);
+      toast.error(err.message || 'Failed to download packing slip');
     }
   };
+
 
   const handleSelectAll = (e) => {
     if (e.target.checked) setSelectedIds(orders.map(o => o._id));
