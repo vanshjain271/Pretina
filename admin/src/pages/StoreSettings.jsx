@@ -110,6 +110,29 @@ export default function StoreSettings() {
                       <TextField fullWidth multiline rows={3} label="Store Address" value={settings.storeAddress || ''} onChange={e => handleChange('storeAddress', e.target.value)} />
                     </Grid>
                   </Grid>
+
+                  <Typography variant="h6" fontWeight={700} sx={{ mt: 4 }}>Announcement Ticker</Typography>
+                  <Divider />
+                  <FormControlLabel
+                    control={
+                      <Switch 
+                        checked={settings.tickerEnabled || false} 
+                        onChange={e => handleChange('tickerEnabled', e.target.checked)} 
+                        color="primary"
+                      />
+                    }
+                    label="Enable Ticker"
+                    sx={{ mb: 1 }}
+                  />
+                  <TextField 
+                    fullWidth 
+                    label="Ticker Text" 
+                    value={settings.tickerText || ''} 
+                    onChange={e => handleChange('tickerText', e.target.value)} 
+                    helperText="This text will scroll horizontally at the top of the mobile home screen."
+                    disabled={!settings.tickerEnabled}
+                  />
+
                 </Stack>
               )}
 
