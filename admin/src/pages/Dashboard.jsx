@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Box, Grid, Card, CardContent, Typography, Chip, Avatar,
   CircularProgress, Button, Divider, List, ListItem, ListItemText,
-  ListItemAvatar, IconButton, Tooltip,
+  ListItemAvatar, IconButton, Tooltip, TextField, MenuItem
 } from '@mui/material';
 import TrendingUpIcon     from '@mui/icons-material/TrendingUp';
 import ShoppingCartIcon   from '@mui/icons-material/ShoppingCart';
@@ -67,12 +67,13 @@ function StatusBadge({ status }) {
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState('last30days');
   const navigate = useNavigate();
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await getDashboardOverview();
+      const res = await getDashboardOverview({ period });
       setData(res.data.overview);
     } catch (e) {
       console.error(e);
@@ -81,7 +82,7 @@ export default function Dashboard() {
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData(); }, [period]);
 
   const ov = data || {};
 
@@ -93,18 +94,33 @@ export default function Dashboard() {
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3, flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Typography variant="h5" fontWeight={700}>Dashboard</Typography>
           <Typography variant="body2" color="text.secondary">
             {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </Typography>
         </Box>
-        <Tooltip title="Refresh">
-          <IconButton onClick={fetchData} disabled={loading}>
-            <RefreshIcon />
-          </IconButton>
-        </Tooltip>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <TextField
+            select
+            size="small"
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+            sx={{ minWidth: 150, bgcolor: '#fff' }}
+          >
+            <MenuItem value="today">Today</MenuItem>
+            <MenuItem value="last7days">Last 7 Days</MenuItem>
+            <MenuItem value="last30days">Last 30 Days</MenuItem>
+            <MenuItem value="thisMonth">This Month</MenuItem>
+            <MenuItem value="lastMonth">Last Month</MenuItem>
+          </TextField>
+          <Tooltip title="Refresh">
+            <IconButton onClick={fetchData} disabled={loading} sx={{ bgcolor: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+              <RefreshIcon />
+            </IconButton>
+          </Tooltip>
+        </Box>
       </Box>
 
       {/* AI Insight Banner */}
