@@ -12,7 +12,7 @@ export default function AbandonedCarts() {
       setLoading(true);
       try { 
         const r = await getAbandonedCarts(); 
-        setCarts(r.data.analytics?.carts || []); 
+        setCarts(r.data.data || []); 
       } catch(e) {
       } finally {
         setLoading(false);
