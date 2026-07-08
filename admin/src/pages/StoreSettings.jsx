@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Box, Card, CardContent, Typography, TextField, Button, Grid,
   CircularProgress, Tabs, Tab, Switch, FormControlLabel, Divider,
-  Stack, InputAdornment, Alert
+  Stack, InputAdornment, Alert, IconButton
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import StorefrontIcon from '@mui/icons-material/Storefront';
@@ -11,7 +11,11 @@ import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import PaymentIcon from '@mui/icons-material/Payment';
 import GavelIcon from '@mui/icons-material/Gavel';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
-import { getSettings, updateSettings } from '../api/endpoints';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import CreditCardIcon from '@mui/icons-material/CreditCard';
+import QrCode2Icon from '@mui/icons-material/QrCode2';
+import MoneyIcon from '@mui/icons-material/Money';
+import { getSettings, updateSettings, uploadQR } from '../api/endpoints';
 import toast from 'react-hot-toast';
 
 export default function StoreSettings() {
@@ -36,6 +40,25 @@ export default function StoreSettings() {
 
   const handleChange = (field, value) => {
     setSettings(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleUploadQR = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('qr', file);
+
+    const toastId = toast.loading('Uploading QR Code...');
+    try {
+      const res = await uploadQR(formData);
+      if (res.data.success) {
+        setSettings(prev => ({ ...prev, qrImageUrl: res.data.url }));
+        toast.success('QR Code uploaded successfully', { id: toastId });
+      }
+    } catch (err) {
+      toast.error('Failed to upload QR Code', { id: toastId });
+    }
   };
 
   const handleSave = async () => {
@@ -228,31 +251,123 @@ export default function StoreSettings() {
 
               {/* PAYMENT SETTINGS (Index 3) */}
               {tabIndex === 3 && (
-                <Stack spacing={3}>
-                  <Typography variant="h6" fontWeight={700}>Active Payment Methods</Typography>
-                  <Divider />
-                  <FormControlLabel control={<Switch checked={settings.paymentCodEnabled || false} onChange={e => handleChange('paymentCodEnabled', e.target.checked)} color="primary" />} label="Enable Cash on Delivery (COD)" />
+                <Stack spacing={4}>
                   
-                  <Box sx={{ p: 2, bgcolor: '#fafafa', borderRadius: 1, mt: 2 }}>
-                    <FormControlLabel control={<Switch checked={settings.paymentRazorpayEnabled || false} onChange={e => handleChange('paymentRazorpayEnabled', e.target.checked)} color="primary" />} label={<strong>Enable Razorpay Gateway</strong>} />
-                    <Typography variant="body2" color="text.secondary" sx={{ ml: 4, mb: 1 }}>Accept cards, netbanking, wallets.</Typography>
+                  {/* COD Settings */}
+                  <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 2, p: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Box sx={{ p: 1, bgcolor: '#f5f5f5', borderRadius: 1 }}><MoneyIcon color="primary" /></Box>
+                      <Box>
+                        <Typography variant="h6" fontWeight={700}>Cash on Delivery (COD)</Typography>
+                        <Typography variant="body2" color="text.secondary">Allow customers to pay when the order is delivered.</Typography>
+                      </Box>
+                    </Box>
+                    <Switch checked={settings.paymentCodEnabled || false} onChange={e => handleChange('paymentCodEnabled', e.target.checked)} color="primary" />
                   </Box>
 
-                  <Box sx={{ p: 2, bgcolor: '#fafafa', borderRadius: 1 }}>
-                    <FormControlLabel control={<Switch checked={settings.paymentQrEnabled || false} onChange={e => handleChange('paymentQrEnabled', e.target.checked)} color="primary" />} label={<strong>Enable Manual UPI / QR</strong>} />
-                    <Typography variant="body2" color="text.secondary" sx={{ ml: 4, mb: 2 }}>Customers upload payment screenshot which you verify manually.</Typography>
+                  {settings.paymentCodEnabled && (
+                    <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 2, p: 3 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: settings.advancePartialPayment ? 2 : 0 }}>
+                        <Box>
+                          <Typography variant="subtitle1" fontWeight={700}>Advance Partial Payment</Typography>
+                          <Typography variant="body2" color="text.secondary">Ask customer to pay a percentage upfront to confirm COD.</Typography>
+                        </Box>
+                        <Switch checked={settings.advancePartialPayment || false} onChange={e => handleChange('advancePartialPayment', e.target.checked)} color="primary" />
+                      </Box>
+                      {settings.advancePartialPayment && (
+                        <TextField 
+                          type="number" 
+                          label="Advance Percentage" 
+                          value={settings.codAdvancePercentage || 10} 
+                          onChange={e => handleChange('codAdvancePercentage', Number(e.target.value))} 
+                          InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }} 
+                          sx={{ width: 200, mt: 1 }}
+                        />
+                      )}
+                    </Box>
+                  )}
+
+                  {/* Razorpay Gateway */}
+                  <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 2, p: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Box sx={{ p: 1, bgcolor: '#f5f5f5', borderRadius: 1 }}><CreditCardIcon color="primary" /></Box>
+                      <Box>
+                        <Typography variant="h6" fontWeight={700}>Online Payment Gateway</Typography>
+                        <Typography variant="body2" color="text.secondary">Accept UPI, Credit/Debit Cards, Net Banking via Razorpay.</Typography>
+                      </Box>
+                    </Box>
+                    <Switch checked={settings.paymentRazorpayEnabled || false} onChange={e => handleChange('paymentRazorpayEnabled', e.target.checked)} color="primary" />
+                  </Box>
+
+                  {/* Manual QR Code */}
+                  <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 2, p: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{ p: 1, bgcolor: '#f5f5f5', borderRadius: 1 }}><QrCode2Icon color="primary" /></Box>
+                        <Box>
+                          <Typography variant="h6" fontWeight={700}>Payment QR Code</Typography>
+                          <Typography variant="body2" color="text.secondary">Upload your UPI QR code for direct manual payments.</Typography>
+                        </Box>
+                      </Box>
+                      <Switch checked={settings.paymentQrEnabled || false} onChange={e => handleChange('paymentQrEnabled', e.target.checked)} color="primary" />
+                    </Box>
                     
                     {settings.paymentQrEnabled && (
-                      <Grid container spacing={2} sx={{ ml: 2, width: 'calc(100% - 16px)' }}>
-                        <Grid item xs={12} md={6}>
-                          <TextField fullWidth label="UPI ID" value={settings.upiId || ''} onChange={e => handleChange('upiId', e.target.value)} size="small" />
+                      <Grid container spacing={3}>
+                        <Grid item xs={12} md={5}>
+                          <Box sx={{ 
+                            border: '1px dashed #bdbdbd', 
+                            borderRadius: 2, 
+                            p: 2, 
+                            textAlign: 'center',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minHeight: 250
+                          }}>
+                            {settings.qrImageUrl ? (
+                              <Box>
+                                <img src={settings.qrImageUrl} alt="QR Code" style={{ maxWidth: '100%', maxHeight: 200, objectFit: 'contain' }} />
+                                <Button component="label" sx={{ mt: 1 }}>
+                                  Change QR Code
+                                  <input type="file" hidden accept="image/*" onChange={handleUploadQR} />
+                                </Button>
+                              </Box>
+                            ) : (
+                              <Box>
+                                <Typography color="text.secondary" mb={2}>No QR Code Uploaded</Typography>
+                                <Button variant="outlined" component="label" startIcon={<CloudUploadIcon />}>
+                                  Upload QR Code
+                                  <input type="file" hidden accept="image/*" onChange={handleUploadQR} />
+                                </Button>
+                              </Box>
+                            )}
+                          </Box>
                         </Grid>
-                        <Grid item xs={12} md={6}>
-                          <TextField fullWidth label="Payee Name" value={settings.upiName || ''} onChange={e => handleChange('upiName', e.target.value)} size="small" />
+                        <Grid item xs={12} md={7}>
+                          <Stack spacing={3}>
+                            <TextField 
+                              fullWidth 
+                              label="UPI ID (e.g. pretina@ybl)" 
+                              value={settings.upiId || ''} 
+                              onChange={e => handleChange('upiId', e.target.value)} 
+                            />
+                            <TextField 
+                              fullWidth 
+                              label="Payee Name" 
+                              value={settings.upiName || ''} 
+                              onChange={e => handleChange('upiName', e.target.value)} 
+                            />
+                            <Alert severity="info" sx={{ mt: 1 }}>
+                              This QR code will be shown to customers if they select manual payment or if they need to pay a partial advance for COD.
+                            </Alert>
+                          </Stack>
                         </Grid>
                       </Grid>
                     )}
                   </Box>
+
                 </Stack>
               )}
 
