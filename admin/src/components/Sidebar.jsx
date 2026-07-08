@@ -167,13 +167,12 @@ export default function Sidebar({ open, width }) {
     >
       {/* Logo */}
       <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1.5, minHeight: 64 }}>
-        <Box sx={{
-          width: 36, height: 36,
-          background: 'linear-gradient(135deg, #FF6B00, #FF8C38)',
-          borderRadius: '10px',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontWeight: 700, color: '#fff', fontSize: 18, flexShrink: 0,
-        }}>P</Box>
+        <Box 
+          component="img" 
+          src="/logo.png" 
+          alt="Pretina" 
+          sx={{ width: 36, height: 36, borderRadius: '8px', objectFit: 'contain' }} 
+        />
         {open && (
           <Box>
             <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 700, lineHeight: 1.2 }}>
