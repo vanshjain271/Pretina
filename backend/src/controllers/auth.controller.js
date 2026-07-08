@@ -99,7 +99,11 @@ exports.adminLogin = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Email and password are required.' });
     }
 
-    const user = await User.findOne({ email, role: { $in: ['admin', 'employee'] } }).select('+password');
+    const query = email.trim();
+    const user = await User.findOne({ 
+      $or: [{ email: { $regex: new RegExp(`^${query}$`, 'i') } }, { phone: query }],
+      role: { $in: ['admin', 'employee'] } 
+    }).select('+password');
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ success: false, message: 'Invalid credentials.' });
     }

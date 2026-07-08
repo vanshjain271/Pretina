@@ -62,7 +62,7 @@ export default function Login() {
 
           <form onSubmit={handleSubmit}>
             <TextField
-              fullWidth label="Email Address" type="email" required
+              fullWidth label="Email or Phone" type="text" required
               value={form.email}
               onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
               sx={{ mb: 2 }}

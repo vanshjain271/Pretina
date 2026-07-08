@@ -77,7 +77,7 @@ const updateEmployee = async (req, res) => {
     if (email !== undefined) employee.email = email;
     if (permissions !== undefined) employee.permissions = permissions;
     if (isActive !== undefined) employee.isActive = isActive;
-    if (password) employee.password = await bcrypt.hash(password, 12);
+    if (password) employee.password = password;
 
     await employee.save();
 
