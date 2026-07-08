@@ -27,6 +27,12 @@ const userSchema = new mongoose.Schema({
   photo:       { type: String, default: '' },
   addresses:   [addressSchema],
 
+  // B2B & Customer Settings (YouthQit Parity)
+  gstNo:       { type: String, default: '' },
+  type:        { type: String, enum: ['Consumer', 'Business', 'Wholesale', 'Affiliate'], default: 'Consumer' },
+  isAffiliate: { type: Boolean, default: false },
+  blockCod:    { type: Boolean, default: false },
+
   // Role: 'customer' | 'admin' | 'employee'
   role:        { type: String, enum: ['customer', 'admin', 'employee'], default: 'customer' },
 
