@@ -80,6 +80,7 @@ export default function Categories() {
         <DialogContent sx={{ px: 3 }}>
           {/* Image Upload Area */}
           <Box sx={{
+            display: 'block',
             border: '2px dashed #e0e0e0',
             borderRadius: 2,
             p: 3,
@@ -95,10 +96,10 @@ export default function Categories() {
             ) : (
               <Box>
                 <CloudUploadIcon sx={{ fontSize: 40, color: '#9e9e9e', mb: 1 }} />
-                <Typography variant="body2" color="primary" fontWeight={600}>Upload Photo</Typography>
+                <Typography variant="body2" color="#FF6B00" fontWeight={600}>Upload Photo</Typography>
               </Box>
             )}
-            <input type="file" hidden accept="image/*" onChange={e => { const f = e.target.files[0]; if(f){setImgFile(f); setPreview(URL.createObjectURL(f));} }} />
+            <input type="file" style={{ display: 'none' }} accept="image/*" onChange={e => { const f = e.target.files[0]; if(f){setImgFile(f); setPreview(URL.createObjectURL(f));} }} />
           </Box>
 
           <TextField fullWidth label="Category Name *" size="small" value={form.name || ''} onChange={e => setForm(p => ({...p, name: e.target.value}))} sx={{ mb: 2 }} />
