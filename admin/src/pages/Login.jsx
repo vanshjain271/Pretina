@@ -48,13 +48,12 @@ export default function Login() {
         <CardContent sx={{ p: 4 }}>
           {/* Logo */}
           <Box sx={{ textAlign: 'center', mb: 4 }}>
-            <Box sx={{
-              width: 56, height: 56, borderRadius: '16px',
-              background: 'linear-gradient(135deg, #FF6B00, #FF8C38)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              mx: 'auto', mb: 2,
-              fontSize: 28, fontWeight: 800, color: '#fff',
-            }}>P</Box>
+            <Box 
+              component="img" 
+              src="/logo.png" 
+              alt="Pretina" 
+              sx={{ width: 64, height: 64, borderRadius: '12px', mx: 'auto', mb: 2, objectFit: 'contain' }} 
+            />
             <Typography variant="h5" fontWeight={700} color="#1A1A2E">Pretina Admin</Typography>
             <Typography variant="body2" color="text.secondary">Sign in to your dashboard</Typography>
           </Box>
