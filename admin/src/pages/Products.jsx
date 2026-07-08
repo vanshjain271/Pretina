@@ -387,6 +387,7 @@ export default function Products() {
                 <TableCell sx={{ fontWeight: 700 }}>Image</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Name</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Pricing</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Variants</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Stock</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Tiers</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Flags</TableCell>
@@ -396,7 +397,7 @@ export default function Products() {
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={8} sx={{ textAlign: 'center', py: 5 }}><CircularProgress size={28} sx={{ color: '#FF6B00' }} /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} sx={{ textAlign: 'center', py: 5 }}><CircularProgress size={28} sx={{ color: '#FF6B00' }} /></TableCell></TableRow>
               ) : products.map(p => (
                 <TableRow key={p._id} hover>
                   <TableCell>
@@ -415,13 +416,24 @@ export default function Products() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Chip 
-                      label={p.hasVariants ? `Variants (${p.variants?.length || 0})` : p.stock} 
-                      size="small"
-                      color={p.hasVariants ? 'info' : p.stock > 0 ? 'success' : 'error'} 
-                      onClick={p.hasVariants ? () => setVariantsModal(p) : undefined}
-                      sx={p.hasVariants ? { cursor: 'pointer', '&:hover': { opacity: 0.8 } } : {}}
-                    />
+                    <Typography 
+                      variant="body2" 
+                      sx={{ color: '#2563EB', cursor: 'pointer', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                      onClick={() => setVariantsModal(p)}
+                    >
+                      Variants ({p.variants?.length || 0})
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    {p.hasVariants ? (
+                      <Typography variant="body2" fontWeight={600}>
+                        {p.variants?.reduce((sum, v) => sum + (Number(v.stock) || 0), 0) || 0} in stock
+                      </Typography>
+                    ) : (
+                      <Typography variant="body2" fontWeight={600}>
+                        {p.stock || 0} in stock
+                      </Typography>
+                    )}
                   </TableCell>
                   <TableCell>
                     {p.bulkPricing?.length > 0
