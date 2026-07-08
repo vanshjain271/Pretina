@@ -183,6 +183,7 @@ export default function Products() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [dialog, setDialog] = useState(null); // null | 'add' | product obj
+  const [variantsModal, setVariantsModal] = useState(null); // null | product obj
   const [form, setForm] = useState(EMPTY);
   const [images, setImages] = useState([]);       // new File[] to upload
   const [existingImages, setExistingImages] = useState([]); // URLs already on product
@@ -414,8 +415,13 @@ export default function Products() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Chip label={p.hasVariants ? 'Variants' : p.stock} size="small"
-                      color={p.hasVariants ? 'info' : p.stock > 0 ? 'success' : 'error'} />
+                    <Chip 
+                      label={p.hasVariants ? `Variants (${p.variants?.length || 0})` : p.stock} 
+                      size="small"
+                      color={p.hasVariants ? 'info' : p.stock > 0 ? 'success' : 'error'} 
+                      onClick={p.hasVariants ? () => setVariantsModal(p) : undefined}
+                      sx={p.hasVariants ? { cursor: 'pointer', '&:hover': { opacity: 0.8 } } : {}}
+                    />
                   </TableCell>
                   <TableCell>
                     {p.bulkPricing?.length > 0
@@ -449,6 +455,66 @@ export default function Products() {
           </Box>
         )}
       </Card>
+
+      {/* ── Variants Modal ────────────────────────────────────── */}
+      <Dialog open={!!variantsModal} onClose={() => setVariantsModal(null)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" fontWeight={700}>
+            Variants for: {variantsModal?.name}
+          </Typography>
+          <Button 
+            variant="contained" 
+            size="small" 
+            startIcon={<EditIcon />}
+            sx={{ bgcolor: '#FF6B00', '&:hover': { bgcolor: '#e66000' } }}
+            onClick={() => {
+              const prod = variantsModal;
+              setVariantsModal(null);
+              openEdit(prod);
+            }}
+          >
+            Edit Product
+          </Button>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 0 }}>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ background: '#FAFAFA' }}>
+                  <TableCell sx={{ fontWeight: 700 }}>Variant Name</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>SKU</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Color</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>MRP</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Sale Price</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Stock</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {variantsModal?.variants?.map((v, i) => (
+                  <TableRow key={i} hover>
+                    <TableCell>{v.name}</TableCell>
+                    <TableCell>{v.sku || '-'}</TableCell>
+                    <TableCell>{v.color || '-'}</TableCell>
+                    <TableCell>₹{v.mrp || 0}</TableCell>
+                    <TableCell>₹{v.salePrice || 0}</TableCell>
+                    <TableCell>{v.stock || 0}</TableCell>
+                  </TableRow>
+                ))}
+                {(!variantsModal?.variants || variantsModal.variants.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={6} sx={{ textAlign: 'center', py: 3, color: 'text.secondary' }}>
+                      No variants found for this product.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setVariantsModal(null)}>Close</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* ── Add / Edit Dialog ─────────────────────────────────── */}
       <Dialog
