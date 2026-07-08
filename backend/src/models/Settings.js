@@ -40,7 +40,9 @@ const settingsSchema = new mongoose.Schema({
   upiName:    { type: String, default: 'Pretina' },
 
   // ── COD & Partial Payment ──────────────────────────────────
+  codAdvanceType:        { type: String, enum: ['percentage', 'fixed'], default: 'percentage' },
   codAdvancePercentage:  { type: Number, default: 10 }, // % of total required upfront
+  codAdvanceFixedAmount: { type: Number, default: 0 },  // Fixed amount upfront
   advancePartialPayment: { type: Boolean, default: false },
 
   // ── Order Settings ─────────────────────────────────────────

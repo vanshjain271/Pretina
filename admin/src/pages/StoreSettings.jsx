@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Box, Card, CardContent, Typography, TextField, Button, Grid,
   CircularProgress, Tabs, Tab, Switch, FormControlLabel, Divider,
-  Stack, InputAdornment, Alert, IconButton
+  Stack, InputAdornment, Alert, IconButton, MenuItem
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import StorefrontIcon from '@mui/icons-material/Storefront';
@@ -275,14 +275,38 @@ export default function StoreSettings() {
                         <Switch checked={settings.advancePartialPayment || false} onChange={e => handleChange('advancePartialPayment', e.target.checked)} color="primary" />
                       </Box>
                       {settings.advancePartialPayment && (
-                        <TextField 
-                          type="number" 
-                          label="Advance Percentage" 
-                          value={settings.codAdvancePercentage || 10} 
-                          onChange={e => handleChange('codAdvancePercentage', Number(e.target.value))} 
-                          InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }} 
-                          sx={{ width: 200, mt: 1 }}
-                        />
+                        <Box sx={{ mt: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+                          <TextField 
+                            select
+                            label="Advance Type"
+                            value={settings.codAdvanceType || 'percentage'}
+                            onChange={e => handleChange('codAdvanceType', e.target.value)}
+                            sx={{ width: 150 }}
+                          >
+                            <MenuItem value="percentage">Percentage (%)</MenuItem>
+                            <MenuItem value="fixed">Fixed Amount (₹)</MenuItem>
+                          </TextField>
+                          
+                          {(!settings.codAdvanceType || settings.codAdvanceType === 'percentage') ? (
+                            <TextField 
+                              type="number" 
+                              label="Advance Percentage" 
+                              value={settings.codAdvancePercentage || 10} 
+                              onChange={e => handleChange('codAdvancePercentage', Number(e.target.value))} 
+                              InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }} 
+                              sx={{ width: 200 }}
+                            />
+                          ) : (
+                            <TextField 
+                              type="number" 
+                              label="Fixed Amount" 
+                              value={settings.codAdvanceFixedAmount || 0} 
+                              onChange={e => handleChange('codAdvanceFixedAmount', Number(e.target.value))} 
+                              InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} 
+                              sx={{ width: 200 }}
+                            />
+                          )}
+                        </Box>
                       )}
                     </Box>
                   )}
