@@ -10,6 +10,7 @@ import PublicIcon from '@mui/icons-material/Public';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import PaymentIcon from '@mui/icons-material/Payment';
 import GavelIcon from '@mui/icons-material/Gavel';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import { getSettings, updateSettings } from '../api/endpoints';
 import toast from 'react-hot-toast';
 
@@ -76,9 +77,10 @@ export default function StoreSettings() {
               sx={{ borderRight: 1, borderColor: 'divider', minHeight: 400, '& .MuiTab-root': { alignItems: 'flex-start', py: 2 } }}
             >
               <Tab icon={<StorefrontIcon sx={{ mr: 1 }} />} iconPosition="start" label="Store Details" />
+              <Tab icon={<ShoppingCartIcon sx={{ mr: 1 }} />} iconPosition="start" label="Checkout Settings" />
+              <Tab icon={<LocalShippingIcon sx={{ mr: 1 }} />} iconPosition="start" label="Delivery Settings" />
+              <Tab icon={<PaymentIcon sx={{ mr: 1 }} />} iconPosition="start" label="Payment Settings" />
               <Tab icon={<PublicIcon sx={{ mr: 1 }} />} iconPosition="start" label="SEO & Social" />
-              <Tab icon={<LocalShippingIcon sx={{ mr: 1 }} />} iconPosition="start" label="Order & Shipping" />
-              <Tab icon={<PaymentIcon sx={{ mr: 1 }} />} iconPosition="start" label="Payment Methods" />
               <Tab icon={<GavelIcon sx={{ mr: 1 }} />} iconPosition="start" label="Legal Policies" />
             </Tabs>
           </Card>
@@ -88,7 +90,7 @@ export default function StoreSettings() {
           <Card sx={{ minHeight: 400 }}>
             <CardContent sx={{ p: 4 }}>
               
-              {/* STORE DETAILS */}
+              {/* STORE DETAILS (Index 0) */}
               {tabIndex === 0 && (
                 <Stack spacing={3}>
                   <Typography variant="h6" fontWeight={700}>Basic Information</Typography>
@@ -136,49 +138,95 @@ export default function StoreSettings() {
                 </Stack>
               )}
 
-              {/* SEO & SOCIAL */}
+              {/* CHECKOUT SETTINGS (Index 1) */}
               {tabIndex === 1 && (
-                <Stack spacing={3}>
-                  <Typography variant="h6" fontWeight={700}>Search Engine Optimization</Typography>
-                  <Divider />
-                  <TextField fullWidth label="Meta Title" value={settings.metaTitle || ''} onChange={e => handleChange('metaTitle', e.target.value)} helperText="Recommended length: 50-60 characters" />
-                  <TextField fullWidth multiline rows={3} label="Meta Description" value={settings.metaDescription || ''} onChange={e => handleChange('metaDescription', e.target.value)} helperText="Recommended length: 150-160 characters" />
-                  <TextField fullWidth label="Meta Keywords" value={settings.metaKeywords || ''} onChange={e => handleChange('metaKeywords', e.target.value)} placeholder="ecommerce, fashion, shoes" />
+                <Stack spacing={4}>
+                  <Box>
+                    <Typography variant="h6" fontWeight={700} mb={2}>Order Limits</Typography>
+                    <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 2, p: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <TextField 
+                        type="number" 
+                        label="Minimum Order Amount" 
+                        value={settings.minOrderValue || 0} 
+                        onChange={e => handleChange('minOrderValue', Number(e.target.value))} 
+                        InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} 
+                        sx={{ width: 300 }}
+                      />
+                      <FormControlLabel
+                        control={
+                          <Switch 
+                            checked={settings.includeTaxInPricing !== false} 
+                            onChange={e => handleChange('includeTaxInPricing', e.target.checked)} 
+                            color="primary"
+                          />
+                        }
+                        label="Include Tax in Pricing"
+                      />
+                    </Box>
+                  </Box>
 
-                  <Typography variant="h6" fontWeight={700} sx={{ mt: 2 }}>Social Media Links</Typography>
-                  <Divider />
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={6}><TextField fullWidth label="Instagram URL" value={settings.instagramUrl || ''} onChange={e => handleChange('instagramUrl', e.target.value)} /></Grid>
-                    <Grid item xs={12} md={6}><TextField fullWidth label="Facebook URL" value={settings.facebookUrl || ''} onChange={e => handleChange('facebookUrl', e.target.value)} /></Grid>
-                    <Grid item xs={12} md={6}><TextField fullWidth label="Twitter/X URL" value={settings.twitterUrl || ''} onChange={e => handleChange('twitterUrl', e.target.value)} /></Grid>
-                    <Grid item xs={12} md={6}><TextField fullWidth label="YouTube URL" value={settings.youtubeUrl || ''} onChange={e => handleChange('youtubeUrl', e.target.value)} /></Grid>
-                  </Grid>
+                  <Box>
+                    <Typography variant="h6" fontWeight={700} mb={2}>Checkout Message</Typography>
+                    <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 2, p: 3 }}>
+                      <Typography variant="body2" color="text.secondary" mb={2}>
+                        This note will be shown on the checkout page to your customers.
+                      </Typography>
+                      <TextField 
+                        fullWidth 
+                        multiline 
+                        rows={4} 
+                        placeholder="e.g. IMPORTANT NOTICE: COD Orders Require Confirmation..."
+                        value={settings.orderNotes || ''} 
+                        onChange={e => handleChange('orderNotes', e.target.value)} 
+                      />
+                    </Box>
+                  </Box>
                 </Stack>
               )}
 
-              {/* ORDER & SHIPPING */}
+              {/* DELIVERY SETTINGS (Index 2) */}
               {tabIndex === 2 && (
                 <Stack spacing={3}>
-                  <Typography variant="h6" fontWeight={700}>Delivery & Tax Configuration</Typography>
-                  <Divider />
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={4}>
-                      <TextField fullWidth type="number" label="Flat Delivery Fee" value={settings.deliveryFee || 0} onChange={e => handleChange('deliveryFee', Number(e.target.value))} InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} />
+                  <Typography variant="h6" fontWeight={700}>Fees & Thresholds</Typography>
+                  <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 2, p: 3 }}>
+                    <Grid container spacing={3} mb={3}>
+                      <Grid item xs={12} md={6}>
+                        <TextField 
+                          fullWidth 
+                          type="number" 
+                          label="Standard Delivery Fee" 
+                          value={settings.deliveryFee || 0} 
+                          onChange={e => handleChange('deliveryFee', Number(e.target.value))} 
+                          InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} 
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <TextField 
+                          fullWidth 
+                          type="number" 
+                          label="Free Delivery Threshold" 
+                          value={settings.freeDeliveryAbove || 0} 
+                          onChange={e => handleChange('freeDeliveryAbove', Number(e.target.value))} 
+                          InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} 
+                        />
+                      </Grid>
                     </Grid>
-                    <Grid item xs={12} md={4}>
-                      <TextField fullWidth type="number" label="Free Delivery Above" value={settings.freeDeliveryAbove || 0} onChange={e => handleChange('freeDeliveryAbove', Number(e.target.value))} InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} />
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <TextField fullWidth type="number" label="Global GST/Tax Rate (%)" value={settings.taxRate || 0} onChange={e => handleChange('taxRate', Number(e.target.value))} />
-                    </Grid>
-                  </Grid>
-                  <Alert severity="info" sx={{ mt: 2 }}>
-                    If a customer's cart total is greater than or equal to "Free Delivery Above", the delivery fee will be zero.
-                  </Alert>
+                    
+                    <FormControlLabel
+                      control={
+                        <Switch 
+                          checked={settings.allIndiaDelivery !== false} 
+                          onChange={e => handleChange('allIndiaDelivery', e.target.checked)} 
+                          color="primary"
+                        />
+                      }
+                      label="Deliver to all Pincodes in India"
+                    />
+                  </Box>
                 </Stack>
               )}
 
-              {/* PAYMENT METHODS */}
+              {/* PAYMENT SETTINGS (Index 3) */}
               {tabIndex === 3 && (
                 <Stack spacing={3}>
                   <Typography variant="h6" fontWeight={700}>Active Payment Methods</Typography>
@@ -208,8 +256,28 @@ export default function StoreSettings() {
                 </Stack>
               )}
 
-              {/* LEGAL POLICIES */}
+              {/* SEO & SOCIAL (Index 4) */}
               {tabIndex === 4 && (
+                <Stack spacing={3}>
+                  <Typography variant="h6" fontWeight={700}>Search Engine Optimization</Typography>
+                  <Divider />
+                  <TextField fullWidth label="Meta Title" value={settings.metaTitle || ''} onChange={e => handleChange('metaTitle', e.target.value)} helperText="Recommended length: 50-60 characters" />
+                  <TextField fullWidth multiline rows={3} label="Meta Description" value={settings.metaDescription || ''} onChange={e => handleChange('metaDescription', e.target.value)} helperText="Recommended length: 150-160 characters" />
+                  <TextField fullWidth label="Meta Keywords" value={settings.metaKeywords || ''} onChange={e => handleChange('metaKeywords', e.target.value)} placeholder="ecommerce, fashion, shoes" />
+
+                  <Typography variant="h6" fontWeight={700} sx={{ mt: 2 }}>Social Media Links</Typography>
+                  <Divider />
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={6}><TextField fullWidth label="Instagram URL" value={settings.instagramUrl || ''} onChange={e => handleChange('instagramUrl', e.target.value)} /></Grid>
+                    <Grid item xs={12} md={6}><TextField fullWidth label="Facebook URL" value={settings.facebookUrl || ''} onChange={e => handleChange('facebookUrl', e.target.value)} /></Grid>
+                    <Grid item xs={12} md={6}><TextField fullWidth label="Twitter/X URL" value={settings.twitterUrl || ''} onChange={e => handleChange('twitterUrl', e.target.value)} /></Grid>
+                    <Grid item xs={12} md={6}><TextField fullWidth label="YouTube URL" value={settings.youtubeUrl || ''} onChange={e => handleChange('youtubeUrl', e.target.value)} /></Grid>
+                  </Grid>
+                </Stack>
+              )}
+
+              {/* LEGAL POLICIES (Index 5) */}
+              {tabIndex === 5 && (
                 <Stack spacing={3}>
                   <Typography variant="h6" fontWeight={700}>Store Policies</Typography>
                   <Divider />

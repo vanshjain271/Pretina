@@ -47,6 +47,8 @@ const settingsSchema = new mongoose.Schema({
   minOrderValue:      { type: Number, default: 0 },
   autoConfirmOrders:  { type: Boolean, default: false },
   orderNotes:         { type: String, default: '' },    // Admin note shown to customers at checkout
+  taxRate:            { type: Number, default: 0 },
+  includeTaxInPricing:{ type: Boolean, default: true },
 
   // ── Delivery Settings ──────────────────────────────────────
   deliveryFee:          { type: Number, default: 0 },
