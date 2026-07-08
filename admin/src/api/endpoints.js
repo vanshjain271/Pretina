@@ -43,6 +43,8 @@ export const createManualOrder = (data) => api.post('/orders/manual', data);
 export const getInvoices = (params) => api.get('/invoices', { params });
 export const getInvoice = (id) => api.get(`/invoices/${id}`);
 export const generateInvoice = (orderId) => api.post(`/invoices/generate/${orderId}`);
+export const getInvoicePDF = (id) => api.get(`/orders/${id}/invoice-pdf`, { responseType: 'blob' });
+export const getPackingSlipPDF = (id) => api.get(`/orders/${id}/packing-slip`, { responseType: 'blob' });
 
 // ── Customers ─────────────────────────────────────────────────────
 export const getCustomers = (params) => api.get('/users', { params });

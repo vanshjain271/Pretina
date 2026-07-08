@@ -74,13 +74,18 @@ export default function AbandonedCarts() {
     
     try {
       const res = await dismissAbandonedCart(cartId);
-      if (res.data.success) {
+      if (res.data?.success || res.status === 200) {
         toast.success('Abandoned cart dismissed');
         setCarts(prev => prev.filter(c => c._id !== cartId));
+        if (selectedCart && selectedCart._id === cartId) {
+          setSelectedCart(null);
+        }
+      } else {
+        throw new Error('Failed to dismiss');
       }
     } catch (e) {
       console.error(e);
-      toast.error('Failed to dismiss cart');
+      toast.error(e.response?.data?.message || 'Failed to dismiss cart');
     }
   };
 

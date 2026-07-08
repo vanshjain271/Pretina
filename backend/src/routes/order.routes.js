@@ -15,6 +15,7 @@ const Settings = require('../models/Settings');
 const Product = require('../models/Product');
 const NotificationService = require('../services/notification.service');
 const SMSService = require('../services/sms.service');
+const { generateInvoicePDF, generatePackingSlipPDF } = require('../utils/pdf.utils');
 
 /* ── UTILITY: Resolve bulk-pricing tier ──────────────────────────
    Mirrors YouthQit's cart.service.js bulk pricing logic.
@@ -440,6 +441,43 @@ router.delete('/:id', protect, adminOnly, async (req, res, next) => {
     await order.deleteOne();
     res.json({ success: true, message: 'Order deleted.' });
   } catch (err) { next(err); }
+});
+
+// GET /orders/:id/invoice-pdf  — download invoice PDF
+router.get('/:id/invoice-pdf', protect, staffOnly, async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate('user', 'name phone email')
+      .populate('items.product', 'name sku images')
+      .lean();
+    if (!order) return res.status(404).send('Order not found');
+
+    const pdfBuffer = await generateInvoicePDF({ order });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="invoice-${order.orderNumber}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error('Invoice PDF error:', err);
+    res.status(500).send('Failed to generate invoice');
+  }
+});
+
+// GET /orders/:id/packing-slip  — download packing slip PDF
+router.get('/:id/packing-slip', protect, staffOnly, async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate('items.product', 'name sku')
+      .lean();
+    if (!order) return res.status(404).send('Order not found');
+
+    const pdfBuffer = await generatePackingSlipPDF(order);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="packing-slip-${order.orderNumber}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error('Packing Slip PDF error:', err);
+    res.status(500).send('Failed to generate packing slip');
+  }
 });
 
 // POST /orders/manual  — admin creates manual order for a customer
