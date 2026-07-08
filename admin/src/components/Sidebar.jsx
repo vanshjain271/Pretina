@@ -64,14 +64,12 @@ const NAV = [
   { type: 'group', label: 'Promotions', icon: <CampaignIcon />, permissions: ['coupons.view', 'banners.view'], children: [
     { label: 'Coupons', icon: <LocalOfferIcon />, to: '/coupons', permissions: ['coupons.view'] },
     { label: 'Banners', icon: <ImageIcon />,       to: '/banners', permissions: ['banners.view'] },
-    { label: 'Alerts',  icon: <CampaignIcon />,    to: '/alerts', permissions: ['banners.view'] },
   ]},
 
   { type: 'group', label: 'Reports',    icon: <BarChartIcon />, permissions: ['reports.view'], children: [
     { label: 'Overview',    icon: <BarChartIcon />,    to: '/reports', permissions: ['reports.view'] },
     { label: 'Geo Map',     icon: <LocationOnIcon />,  to: '/analytics/geo', permissions: ['reports.view'] },
     { label: 'Inventory',   icon: <WarehouseIcon />,   to: '/analytics/inventory', permissions: ['reports.view'] },
-    { label: 'Peak Hours',  icon: <AccessTimeIcon />,  to: '/analytics/peak-hours', permissions: ['reports.view'] },
   ]},
 
   { type: 'divider' },

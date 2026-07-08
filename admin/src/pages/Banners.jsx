@@ -1,86 +1,360 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Card, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch, FormControlLabel, CircularProgress, Chip } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import toast from 'react-hot-toast';
-import { getBanners, createBanner, updateBanner, deleteBanner } from '../api/endpoints';
-import dayjs from 'dayjs';
+import React, { useState, useEffect } from 'react';
+import {
+  Box, Typography, Button, Card, CardContent, CardMedia, Grid, IconButton,
+  Chip, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions,
+  TextField, Select, MenuItem, FormControl, InputLabel, Switch, FormControlLabel,
+  Snackbar, Alert, Autocomplete
+} from '@mui/material';
+import { Add, Edit, Delete, Launch } from '@mui/icons-material';
+import { getBanners, createBanner, updateBanner, deleteBanner, getProducts, getCategories } from '../api/endpoints';
 
-const EMPTY = { title: '', linkType: 'none', linkValue: '', isActive: true };
+const PLACEMENT_OPTIONS = [
+  { value: 'HOME_TOP', label: 'Home Page Top Banner' },
+  { value: 'HOME_MIDDLE', label: 'Home Page Middle (Promotional)' },
+  { value: 'HOME_BOTTOM', label: 'Home Page Bottom' },
+  { value: 'PRODUCT_PAGE', label: 'Product Details Page' },
+  { value: 'CART_PAGE', label: 'Cart Page' }
+];
+
+const emptyForm = {
+  title: '',
+  description: '',
+  placement: 'HOME_TOP',
+  sortOrder: '0',
+  isActive: true,
+  linkedProduct: null,
+  linkedCategory: null,
+};
 
 export default function Banners() {
-  const [items, setItems] = useState([]);
+  const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [dialog, setDialog] = useState(null);
-  const [form, setForm] = useState(EMPTY);
-  const [imgFile, setImgFile] = useState(null);
-  const [preview, setPreview] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState(emptyForm);
+  const [imageFile, setImageFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState('');
   const [saving, setSaving] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [categories, setCategories] = useState([]);
+  const [products, setProducts] = useState([]);
 
-  const load = async () => { setLoading(true); try { const { data } = await getBanners(); setItems(data.data); } catch {} finally { setLoading(false); } };
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    fetchBanners();
+    fetchCategoriesData();
+    fetchProductsData();
+  }, []);
+
+  const fetchCategoriesData = async () => {
+    try {
+      const { data } = await getCategories();
+      setCategories(data?.data || []);
+    } catch (err) {
+      console.error('Failed to fetch categories', err);
+    }
+  };
+
+  const fetchProductsData = async () => {
+    try {
+      const { data } = await getProducts({ limit: 500 });
+      setProducts(data?.data?.products || data?.data || []);
+    } catch (err) {
+      console.error('Failed to fetch products', err);
+    }
+  };
+
+  const fetchBanners = async () => {
+    try {
+      setLoading(true);
+      const { data } = await getBanners();
+      setBanners(data?.data || []);
+    } catch (err) {
+      console.error('Failed to fetch banners', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm(emptyForm);
+    setImageFile(null);
+    setPreviewUrl('');
+    setDialogOpen(true);
+  };
+
+  const openEdit = (banner) => {
+    setEditing(banner);
+
+    // Resolve linked product/category from banner's linkType + linkTarget
+    let linkedProduct = null;
+    let linkedCategory = null;
+    
+    if (banner.linkType === 'PRODUCT' && banner.linkTarget) {
+      linkedProduct = products.find((p) => p._id === banner.linkTarget) || { _id: banner.linkTarget, name: banner.linkTarget };
+    } else if (banner.linkType === 'CATEGORY' && banner.linkTarget) {
+      linkedCategory = categories.find((c) => c._id === banner.linkTarget) || { _id: banner.linkTarget, name: banner.linkTarget };
+    } else if (banner.linkType === 'product' && banner.linkId) {
+      // Legacy Pretina support
+      linkedProduct = products.find((p) => p._id === banner.linkId) || { _id: banner.linkId, name: banner.linkId };
+    } else if (banner.linkType === 'category' && banner.linkId) {
+      // Legacy Pretina support
+      linkedCategory = categories.find((c) => c._id === banner.linkId) || { _id: banner.linkId, name: banner.linkId };
+    }
+
+    setForm({
+      title: banner.title || '',
+      description: banner.description || '',
+      placement: banner.placement || 'HOME_TOP',
+      sortOrder: banner.sortOrder?.toString() || '0',
+      isActive: banner.isActive !== false,
+      linkedProduct,
+      linkedCategory,
+    });
+    setPreviewUrl(banner.image || '');
+    setImageFile(null);
+    setDialogOpen(true);
+  };
+
+  const handleImageChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImageFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
 
   const handleSave = async () => {
-    if (!imgFile && dialog === 'add') { toast.error('Please upload a banner image'); return; }
+    if (!form.title.trim()) return;
+    if (!editing && !imageFile) {
+        setSnackbar({ open: true, message: 'Please select an image', severity: 'error' });
+        return;
+    }
+
     setSaving(true);
     try {
-      const fd = new FormData();
-      Object.entries(form).forEach(([k,v]) => fd.append(k, v));
-      if (imgFile) fd.append('image', imgFile);
-      if (dialog === 'add') { await createBanner(fd); toast.success('Banner created!'); }
-      else { await updateBanner(dialog._id, fd); toast.success('Updated!'); }
-      setDialog(null); load();
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
-    finally { setSaving(false); }
+      const formData = new FormData();
+      formData.append('title', form.title);
+      formData.append('description', form.description);
+      formData.append('placement', form.placement);
+      formData.append('sortOrder', form.sortOrder);
+      formData.append('isActive', String(form.isActive));
+
+      // Determine linkType and linkTarget based on dropdown selections
+      // Priority: Product > Category > None
+      if (form.linkedProduct) {
+        formData.append('linkType', 'PRODUCT');
+        formData.append('linkTarget', form.linkedProduct._id);
+      } else if (form.linkedCategory) {
+        formData.append('linkType', 'CATEGORY');
+        formData.append('linkTarget', form.linkedCategory._id);
+      } else {
+        formData.append('linkType', 'NONE');
+        formData.append('linkTarget', '');
+      }
+
+      if (imageFile) {
+        formData.append('image', imageFile);
+      }
+
+      if (editing) {
+        await updateBanner(editing._id, formData);
+        setSnackbar({ open: true, message: 'Banner updated!', severity: 'success' });
+      } else {
+        await createBanner(formData);
+        setSnackbar({ open: true, message: 'Banner created!', severity: 'success' });
+      }
+      
+      setDialogOpen(false);
+      fetchBanners();
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to save banner';
+      setSnackbar({ open: true, message: msg, severity: 'error' });
+    } finally {
+      setSaving(false);
+    }
   };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this banner?')) return;
+    try {
+      await deleteBanner(id);
+      setBanners(banners.filter(b => b._id !== id));
+      setSnackbar({ open: true, message: 'Banner deleted', severity: 'success' });
+    } catch (err) {
+      console.error('Failed to delete banner', err);
+    }
+  };
+
+  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h5" fontWeight={700} color="#1A1A2E">Banners</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setForm(EMPTY); setImgFile(null); setPreview(''); setDialog('add'); }}>Add Banner</Button>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600 }}>Banners</Typography>
+        <Button variant="contained" startIcon={<Add />} onClick={openCreate} sx={{ bgcolor: '#FF6B00', '&:hover': { bgcolor: '#e66000' } }}>Add Banner</Button>
       </Box>
-      <Card>
-        <TableContainer><Table>
-          <TableHead><TableRow sx={{ background: '#FAFAFA' }}>
-            <TableCell sx={{ fontWeight: 700 }}>Image</TableCell>
-            <TableCell sx={{ fontWeight: 700 }}>Title</TableCell>
-            <TableCell sx={{ fontWeight: 700 }}>Active</TableCell>
-            <TableCell sx={{ fontWeight: 700 }}>Actions</TableCell>
-          </TableRow></TableHead>
-          <TableBody>
-            {loading ? <TableRow><TableCell colSpan={4} sx={{ textAlign: 'center', py: 4 }}><CircularProgress size={28} sx={{ color: '#FF6B00' }} /></TableCell></TableRow>
-            : items.map(b => (
-              <TableRow key={b._id} hover>
-                <TableCell><img src={b.image} alt="" style={{ width: 100, height: 50, objectFit: 'cover', borderRadius: 8 }} /></TableCell>
-                <TableCell><Typography variant="body2" fontWeight={600}>{b.title || 'Untitled'}</Typography></TableCell>
-                <TableCell><Chip label={b.isActive ? 'Active' : 'Hidden'} size="small" color={b.isActive ? 'success' : 'default'} /></TableCell>
-                <TableCell>
-                  <IconButton size="small" onClick={() => { setForm(b); setImgFile(null); setPreview(b.image||''); setDialog(b); }} sx={{ color: '#FF6B00' }}><EditIcon fontSize="small" /></IconButton>
-                  <IconButton size="small" onClick={async () => { if(!confirm('Delete?')) return; await deleteBanner(b._id); toast.success('Deleted'); load(); }} sx={{ color: '#e53e3e' }}><DeleteIcon fontSize="small" /></IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table></TableContainer>
-      </Card>
-      <Dialog open={!!dialog} onClose={() => setDialog(null)} maxWidth="sm" fullWidth>
-        <DialogTitle>{dialog === 'add' ? 'Add Banner' : 'Edit Banner'}</DialogTitle>
+
+      <Grid container spacing={3}>
+        {banners.length === 0 ? (
+          <Grid item xs={12}>
+            <Typography color="text.secondary">No banners found. Add your first banner.</Typography>
+          </Grid>
+        ) : (
+          banners.map((banner) => (
+            <Grid item xs={12} md={6} key={banner._id}>
+              <Card sx={{ opacity: banner.isActive ? 1 : 0.6 }}>
+                <CardMedia
+                  component="img"
+                  sx={{ height: 140, objectFit: 'cover', backgroundColor: '#E0E0E0' }}
+                  image={banner.image || ''}
+                  alt={banner.title}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
+                />
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2 }}>
+                    <Box>
+                      <Typography variant="h6">{banner.title || 'Untitled'}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {PLACEMENT_OPTIONS.find(p => p.value === banner.placement)?.label || banner.placement}
+                      </Typography>
+                    </Box>
+                    <Chip
+                      label={banner.isActive ? 'Active' : 'Inactive'}
+                      size="small"
+                      color={banner.isActive ? 'success' : 'default'}
+                    />
+                  </Box>
+
+                  {/* Show linked product/category info */}
+                  {banner.linkType && banner.linkType !== 'NONE' && banner.linkType !== 'none' && (
+                    <Box sx={{ mb: 1 }}>
+                      <Chip
+                        icon={<Launch sx={{ fontSize: 14 }} />}
+                        label={
+                          banner.linkType === 'PRODUCT' || banner.linkType === 'product'
+                            ? `Product: ${products.find(p => p._id === (banner.linkTarget || banner.linkId))?.name || banner.linkTarget || banner.linkId}`
+                            : `Category: ${categories.find(c => c._id === (banner.linkTarget || banner.linkId))?.name || banner.linkTarget || banner.linkId}`
+                        }
+                        size="small"
+                        variant="outlined"
+                        color="primary"
+                      />
+                    </Box>
+                  )}
+
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="body2" color="text.secondary">
+                      {banner.viewCount || 0} views
+                    </Typography>
+                    <Box>
+                      <IconButton size="small" onClick={() => openEdit(banner)} sx={{ color: '#FF6B00' }}><Edit /></IconButton>
+                      <IconButton size="small" color="error" onClick={() => handleDelete(banner._id)}><Delete /></IconButton>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))
+        )}
+      </Grid>
+
+      {/* Create/Edit Dialog */}
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>{editing ? 'Edit Banner' : 'Add Banner'}</DialogTitle>
         <DialogContent>
-          <TextField fullWidth label="Title (optional)" size="small" value={form.title||''} onChange={e => setForm(p=>({...p,title:e.target.value}))} sx={{ mt:1, mb:2 }} />
-          <FormControlLabel control={<Switch checked={!!form.isActive} onChange={e => setForm(p=>({...p,isActive:e.target.checked}))} />} label="Active" sx={{ mb:2, display:'block' }} />
-          <Button variant="outlined" component="label" size="small">
-            {preview ? 'Change Image' : 'Upload Banner Image *'}
-            <input type="file" hidden accept="image/*" onChange={e => { const f=e.target.files[0]; if(f){setImgFile(f);setPreview(URL.createObjectURL(f));} }} />
-          </Button>
-          {preview && <Box sx={{mt:1}}><img src={preview} alt="" style={{width:'100%',maxHeight:160,objectFit:'cover',borderRadius:8}} /></Box>}
+          <TextField
+            autoFocus fullWidth label="Title" value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            sx={{ mt: 1 }} required size="small"
+          />
+          <TextField
+            fullWidth label="Description" value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            sx={{ mt: 2 }} multiline rows={2} size="small"
+          />
+
+          <Box sx={{ mt: 3, mb: 1 }}>
+            <Typography variant="subtitle2" gutterBottom>Banner Image</Typography>
+            <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                style={{ marginBottom: '10px' }}
+            />
+          </Box>
+          
+          {previewUrl && (
+            <Box sx={{ mt: 1, borderRadius: 1, overflow: 'hidden', border: '1px solid #e0e0e0' }}>
+              <img src={previewUrl} alt="Preview" style={{ width: '100%', maxHeight: 180, objectFit: 'cover' }}
+                onError={(e) => { e.target.style.display = 'none'; }} />
+            </Box>
+          )}
+
+          <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Placement</InputLabel>
+              <Select value={form.placement} label="Placement" onChange={(e) => setForm({ ...form, placement: e.target.value })}>
+                {PLACEMENT_OPTIONS.map(p => <MenuItem key={p.value} value={p.value}>{p.label}</MenuItem>)}
+              </Select>
+            </FormControl>
+            <TextField
+              fullWidth label="Sort Order" type="number" value={form.sortOrder}
+              onChange={(e) => setForm({ ...form, sortOrder: e.target.value })}
+              size="small"
+            />
+          </Box>
+
+          {/* Category Dropdown (Optional) */}
+          <Autocomplete
+            options={categories}
+            getOptionLabel={(option) => option.name || ''}
+            value={form.linkedCategory}
+            onChange={(_e, newVal) => setForm({ ...form, linkedCategory: newVal })}
+            isOptionEqualToValue={(option, value) => option._id === value._id}
+            renderInput={(params) => (
+              <TextField {...params} label="Link to Category (Optional)" placeholder="Select a category" size="small" />
+            )}
+            sx={{ mt: 2 }}
+          />
+
+          {/* Product Dropdown (Optional) */}
+          <Autocomplete
+            options={products}
+            getOptionLabel={(option) => option.name || ''}
+            value={form.linkedProduct}
+            onChange={(_e, newVal) => setForm({ ...form, linkedProduct: newVal })}
+            isOptionEqualToValue={(option, value) => option._id === value._id}
+            renderInput={(params) => (
+              <TextField {...params} label="Link to Product (Optional)" placeholder="Select a product" size="small" />
+            )}
+            sx={{ mt: 2 }}
+          />
+
+          {form.linkedProduct && form.linkedCategory && (
+            <Alert severity="info" sx={{ mt: 1 }}>
+              Both product and category are selected. Product link takes priority on mobile.
+            </Alert>
+          )}
+
+          <FormControlLabel
+            control={<Switch checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />}
+            label="Active" sx={{ mt: 2 }}
+          />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialog(null)}>Cancel</Button>
-          <Button variant="contained" onClick={handleSave} disabled={saving}>{saving?'Saving...':'Save'}</Button>
+          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleSave} disabled={saving || !form.title.trim()} sx={{ bgcolor: '#FF6B00', '&:hover': { bgcolor: '#e66000' } }}>
+            {saving ? 'Saving...' : editing ? 'Update' : 'Create'}
+          </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })}>
+        <Alert severity={snackbar.severity}>{snackbar.message}</Alert>
+      </Snackbar>
     </Box>
   );
 }

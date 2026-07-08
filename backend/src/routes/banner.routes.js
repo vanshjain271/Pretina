@@ -12,6 +12,8 @@ const setCache = (req, res, next) => { res.set('Cache-Control', 'private, max-ag
 router.get('/', setCache, async (req, res, next) => {
   try {
     const now = new Date();
+    const { placement } = req.query;
+    
     const query = {
       isActive: true,
       $or: [
@@ -20,6 +22,8 @@ router.get('/', setCache, async (req, res, next) => {
         { startDate: { $lte: now }, endDate: null },
       ],
     };
+    if (placement) query.placement = placement;
+    
     const banners = await Banner.find(query).sort({ sortOrder: 1 });
     res.json({ success: true, data: banners });
   } catch (err) { next(err); }

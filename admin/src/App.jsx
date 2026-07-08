@@ -15,7 +15,6 @@ const Brands          = lazy(() => import('./pages/Brands'));
 const Orders          = lazy(() => import('./pages/Orders'));
 const OrderDetail     = lazy(() => import('./pages/OrderDetail'));
 const Banners         = lazy(() => import('./pages/Banners'));
-const Alerts          = lazy(() => import('./pages/Alerts'));
 const Coupons         = lazy(() => import('./pages/Coupons'));
 const Users           = lazy(() => import('./pages/Users'));
 const Settings        = lazy(() => import('./pages/Settings'));
@@ -37,8 +36,6 @@ const AddOrder        = lazy(() => import('./pages/AddOrder'));
 const PurchaseOrders  = lazy(() => import('./pages/PurchaseOrders'));
 const GeoAnalytics    = lazy(() => import('./pages/GeoAnalytics'));
 const InventoryAnalytics = lazy(() => import('./pages/InventoryAnalytics'));
-const PeakHours       = lazy(() => import('./pages/PeakHours'));
-
 // ── Pretina MUI Theme (unchanged — orange/navy/white) ─────────────
 const theme = createTheme({
   palette: {
@@ -109,13 +106,11 @@ export default function App() {
             {/* ── Promotions ── */}
             <Route path="coupons"          element={<ProtectedRoute permissions={['coupons.view']}><Coupons /></ProtectedRoute>} />
             <Route path="banners"          element={<ProtectedRoute permissions={['banners.view']}><Banners /></ProtectedRoute>} />
-            <Route path="alerts"           element={<ProtectedRoute permissions={['banners.view']}><Alerts /></ProtectedRoute>} />
 
             {/* ── Reports & Analytics ── */}
             <Route path="reports"          element={<ProtectedRoute permissions={['reports.view']}><Reports /></ProtectedRoute>} />
             <Route path="analytics/geo"    element={<ProtectedRoute permissions={['reports.view']}><GeoAnalytics /></ProtectedRoute>} />
             <Route path="analytics/inventory" element={<ProtectedRoute permissions={['reports.view']}><InventoryAnalytics /></ProtectedRoute>} />
-            <Route path="analytics/peak-hours" element={<ProtectedRoute permissions={['reports.view']}><PeakHours /></ProtectedRoute>} />
 
             {/* ── Store ── */}
             <Route path="store-settings"   element={<ProtectedRoute permissions={['settings.view']}><StoreSettings /></ProtectedRoute>} />
