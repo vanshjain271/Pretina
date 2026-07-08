@@ -28,6 +28,7 @@ export default function AddOrder() {
   
   const [discount, setDiscount] = useState(0);
   const [deliveryFee, setDeliveryFee] = useState(0);
+  const [tokenReceived, setTokenReceived] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState('cod');
 
   useEffect(() => {
@@ -97,6 +98,7 @@ export default function AddOrder() {
 
   const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const total = subtotal - Number(discount) + Number(deliveryFee);
+  const due = total - Number(tokenReceived);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -111,12 +113,13 @@ export default function AddOrder() {
         shippingAddress,
         paymentMethod,
         discount: Number(discount),
-        deliveryFee: Number(deliveryFee)
+        deliveryFee: Number(deliveryFee),
+        tokenReceived: Number(tokenReceived)
       };
       
       const res = await createManualOrder(payload);
       toast.success('Manual order created successfully!');
-      navigate(`/orders/${res.data.data._id}`);
+      navigate(`/orders`);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to create order');
     } finally {
@@ -260,6 +263,9 @@ export default function AddOrder() {
                     <Grid item xs={6}>
                       <TextField fullWidth size="small" label="Delivery Fee (₹)" type="number" value={deliveryFee} onChange={e => setDeliveryFee(e.target.value)} />
                     </Grid>
+                    <Grid item xs={12}>
+                      <TextField fullWidth size="small" label="Advance Token Paid (₹)" type="number" value={tokenReceived} onChange={e => setTokenReceived(e.target.value)} helperText="Advance payment subtracted from total due" />
+                    </Grid>
                   </Grid>
                 </Stack>
 
@@ -280,9 +286,21 @@ export default function AddOrder() {
                   </Box>
                   <Divider sx={{ my: 1 }} />
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography fontWeight={700} fontSize={18}>Total</Typography>
-                    <Typography fontWeight={700} fontSize={20} color="primary">₹{total}</Typography>
+                    <Typography fontWeight={700} fontSize={16}>Total Amount</Typography>
+                    <Typography fontWeight={700} fontSize={16} color="primary">₹{total}</Typography>
                   </Box>
+                  {Number(tokenReceived) > 0 && (
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography fontWeight={600} fontSize={14} color="text.secondary">Advance Paid</Typography>
+                      <Typography fontWeight={600} fontSize={14} color="success.main">-₹{tokenReceived}</Typography>
+                    </Box>
+                  )}
+                  {Number(tokenReceived) > 0 && (
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
+                      <Typography fontWeight={700} fontSize={18} color="error.main">Due Amount</Typography>
+                      <Typography fontWeight={700} fontSize={20} color="error.main">₹{Math.max(due, 0)}</Typography>
+                    </Box>
+                  )}
                 </Stack>
 
                 <Button 

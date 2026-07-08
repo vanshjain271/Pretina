@@ -485,7 +485,7 @@ router.delete('/:id', protect, adminOnly, async (req, res, next) => {
 // POST /orders/manual  — admin creates manual order for a customer
 router.post('/manual', protect, staffOnly, async (req, res, next) => {
   try {
-    const { customerId, items, shippingAddress, paymentMethod, discount = 0, deliveryFee = 0, adminNote } = req.body;
+    const { customerId, items, shippingAddress, paymentMethod, discount = 0, deliveryFee = 0, tokenReceived = 0, adminNote } = req.body;
 
     let subtotal = 0;
     const orderItems = [];
@@ -521,6 +521,7 @@ router.post('/manual', protect, staffOnly, async (req, res, next) => {
       subtotal,
       discount: Number(discount),
       deliveryFee: Number(deliveryFee),
+      tokenReceived: Number(tokenReceived),
       total,
       shippingAddress,
       paymentMethod,
