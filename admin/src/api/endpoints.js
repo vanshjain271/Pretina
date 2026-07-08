@@ -99,8 +99,8 @@ export const getDeadStockAnalytics = (params) => api.get('/analytics/dead-stock'
 
 // ── Reviews ───────────────────────────────────────────────────────
 export const getReviews = (params) => api.get('/reviews', { params });
+export const updateReviewStatus = (id, data) => api.put(`/reviews/${id}/status`, data);
 export const deleteReview = (id) => api.delete(`/reviews/${id}`);
-export const toggleReviewVisibility = (id) => api.patch(`/reviews/${id}/toggle`);
 
 // ── Blog ──────────────────────────────────────────────────────────
 export const getBlogs = (params) => api.get('/blog', { params });
