@@ -20,6 +20,9 @@ export const apiSlice = createApi({
     getHomepageProducts: builder.query({
       query: () => '/products/homepage',
     }),
+    getSettings: builder.query({
+      query: () => '/settings',
+    }),
   }),
 });
 
@@ -28,4 +31,5 @@ export const {
   useGetCategoriesQuery,
   useGetBrandsQuery,
   useGetHomepageProductsQuery,
+  useGetSettingsQuery,
 } = apiSlice;

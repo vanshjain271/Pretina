@@ -55,10 +55,10 @@ export default function AnimatedSplashScreen({ children, isAppReady }) {
     return children;
   }
 
-  // Interpolate the background color from Pretina Orange to Dark Mode background
+  // Interpolate the background color from Pretina Orange to Light Mode background
   const backgroundColor = backgroundColorInterpolation.interpolate({
     inputRange: [0, 1],
-    outputRange: ['#FF6600', '#111111'], // From Pretina Orange to Dark
+    outputRange: ['#FF6600', '#F9FAFB'], // From Pretina Orange to Light
   });
 
   return (

@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { colors } from '../../theme/colors';
 
+import { getConfirmation } from '../../utils/firebaseAuthStore';
+
 export default function OtpVerifyScreen({ route, navigation }) {
-  const { confirmation, phoneNumber } = route.params;
+  const { phoneNumber } = route.params;
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -14,6 +16,8 @@ export default function OtpVerifyScreen({ route, navigation }) {
     }
     setLoading(true);
     try {
+      const confirmation = getConfirmation();
+      if (!confirmation) throw new Error('Session expired');
       await confirmation.confirm(code);
       setLoading(false);
       // On success, Firebase Auth state listener will catch it

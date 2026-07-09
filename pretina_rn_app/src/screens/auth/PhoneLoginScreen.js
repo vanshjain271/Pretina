@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import { colors } from '../../theme/colors';
+import { setConfirmation } from '../../utils/firebaseAuthStore';
 
-export default function PhoneLoginScreen({ navigation }) {
+export default function PhoneLoginScreen({ route, navigation }) {
+  const mode = route.params?.mode || 'signin';
   const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -14,10 +16,11 @@ export default function PhoneLoginScreen({ navigation }) {
     }
     setLoading(true);
     try {
-      const formattedNumber = `+91${phoneNumber}`; // Assuming India for Pretina based on Razorpay/UPI
+      const formattedNumber = `+91${phoneNumber}`; 
       const confirmation = await auth().signInWithPhoneNumber(formattedNumber);
+      setConfirmation(confirmation);
       setLoading(false);
-      navigation.navigate('OtpVerify', { confirmation, phoneNumber });
+      navigation.navigate('OtpVerify', { phoneNumber });
     } catch (error) {
       setLoading(false);
       Alert.alert('Error', error.message);
@@ -30,8 +33,8 @@ export default function PhoneLoginScreen({ navigation }) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>Welcome to Pretina</Text>
-        <Text style={styles.subtitle}>Enter your phone number to login or register</Text>
+        <Text style={styles.title}>{mode === 'signin' ? 'Sign In' : 'Sign Up'}</Text>
+        <Text style={styles.subtitle}>Enter your phone number to continue</Text>
 
         <View style={styles.inputContainer}>
           <Text style={styles.prefix}>+91</Text>

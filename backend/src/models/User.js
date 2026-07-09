@@ -25,6 +25,7 @@ const userSchema = new mongoose.Schema({
 
   // Profile
   photo:       { type: String, default: '' },
+  pincode:     { type: String, default: '' },
   addresses:   [addressSchema],
 
   // B2B & Customer Settings (YouthQit Parity)

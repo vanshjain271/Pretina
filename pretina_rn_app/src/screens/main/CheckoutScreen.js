@@ -5,13 +5,24 @@ import { colors } from '../../theme/colors';
 export default function CheckoutScreen({ navigation }) {
   const [selectedPayment, setSelectedPayment] = useState('razorpay'); // razorpay, qr, cod
   const [transactionId, setTransactionId] = useState('');
+  const [selectedAddress, setSelectedAddress] = useState(null);
   
   // Dummy values for now
   const checkoutMessage = "Notice: Advance payment of ₹1000 is required for COD orders outside Delhi.";
   const totalAmount = 6000;
   const qrImageUrl = 'https://dummyimage.com/200x200/000/fff&text=UPI+QR';
 
+  const handleSelectAddress = () => {
+    navigation.navigate('AddressSelection', {
+      onSelect: (address) => setSelectedAddress(address)
+    });
+  };
+
   const handlePlaceOrder = () => {
+    if (!selectedAddress) {
+      Alert.alert('Error', 'Please select a delivery address first.');
+      return;
+    }
     if (selectedPayment === 'qr') {
       if (!transactionId) {
         Alert.alert('Error', 'Please enter your UPI Transaction ID');
@@ -48,6 +59,21 @@ export default function CheckoutScreen({ navigation }) {
             <Text style={styles.messageText}>{checkoutMessage}</Text>
           </View>
         ) : null}
+
+        <Text style={styles.sectionTitle}>Delivery Address</Text>
+        <TouchableOpacity style={styles.addressBox} onPress={handleSelectAddress}>
+          {selectedAddress ? (
+            <View>
+              <Text style={styles.addressName}>{selectedAddress.name}</Text>
+              <Text style={styles.addressText}>{selectedAddress.line1}</Text>
+              <Text style={styles.addressText}>{selectedAddress.city}, {selectedAddress.state} - {selectedAddress.pincode}</Text>
+              <Text style={styles.addressPhone}>Phone: {selectedAddress.phone}</Text>
+              <Text style={styles.changeAddressText}>Change Address</Text>
+            </View>
+          ) : (
+            <Text style={styles.selectAddressText}>+ Select Delivery Address</Text>
+          )}
+        </TouchableOpacity>
 
         <Text style={styles.sectionTitle}>Order Summary</Text>
         <View style={styles.summaryBox}>
@@ -169,6 +195,43 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     borderWidth: 1,
     borderColor: colors.gray200,
+  },
+  addressBox: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    borderStyle: 'dashed',
+  },
+  addressName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  addressText: {
+    fontSize: 14,
+    color: colors.gray700,
+    marginBottom: 2,
+  },
+  addressPhone: {
+    fontSize: 14,
+    color: colors.gray700,
+    fontWeight: '500',
+    marginTop: 4,
+  },
+  changeAddressText: {
+    color: colors.primary,
+    fontWeight: 'bold',
+    marginTop: 8,
+    textAlign: 'right',
+  },
+  selectAddressText: {
+    color: colors.primary,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    paddingVertical: 12,
   },
   summaryRow: {
     flexDirection: 'row',

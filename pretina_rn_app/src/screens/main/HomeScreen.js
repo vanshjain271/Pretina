@@ -1,35 +1,62 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, Image, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, Image, TouchableOpacity, ActivityIndicator, Dimensions, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import {
   useGetBannersQuery,
   useGetCategoriesQuery,
   useGetBrandsQuery,
-  useGetHomepageProductsQuery
+  useGetHomepageProductsQuery,
+  useGetSettingsQuery
 } from '../../store/apiSlice';
 
-
 const { width } = Dimensions.get('window');
+
+const MarqueeText = ({ children }) => {
+  const animatedValue = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    Animated.loop(
+      Animated.timing(animatedValue, {
+        toValue: 1,
+        duration: 8000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, [animatedValue]);
+
+  const translateX = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [width - 60, -250] // Approximate width
+  });
+
+  return (
+    <View style={{ overflow: 'hidden', flex: 1 }}>
+      <Animated.Text style={[styles.minOrderText, { transform: [{ translateX }] }]} numberOfLines={1}>
+        {children}
+      </Animated.Text>
+    </View>
+  );
+};
 
 export default function HomeScreen({ navigation }) {
   const { data: bannersRes, isLoading: loadingBanners } = useGetBannersQuery('home');
   const { data: categoriesRes, isLoading: loadingCategories } = useGetCategoriesQuery();
   const { data: brandsRes, isLoading: loadingBrands } = useGetBrandsQuery();
   const { data: productsRes, isLoading: loadingProducts } = useGetHomepageProductsQuery();
+  const { data: settingsRes } = useGetSettingsQuery();
 
   const banners = bannersRes?.data || [];
   const categories = categoriesRes?.data || [];
   const brands = brandsRes?.data || [];
-  // For products, we use the first section (e.g., featured or newArrivals)
   const products = productsRes?.data?.newArrivals || productsRes?.data?.featured || [];
+  const settings = settingsRes?.data;
 
   const renderHeader = () => (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
-        <View style={styles.logoContainer}>
-          <Text style={styles.logoText}>P</Text>
-        </View>
+        <Image source={require('../../../assets/P.png')} style={styles.headerLogo} />
         <Text style={styles.headerTitle}>Pretina</Text>
       </View>
       <View style={styles.headerRight}>
@@ -58,7 +85,9 @@ export default function HomeScreen({ navigation }) {
           ) : banners.length > 0 ? (
             <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
               {banners.map((banner) => (
-                <Image key={banner._id} source={{ uri: banner.image }} style={styles.bannerImage} resizeMode="cover" />
+                <View key={banner._id} style={{ width, height: 180, backgroundColor: '#fff' }}>
+                  <Image source={{ uri: banner.image }} style={styles.bannerImage} resizeMode="contain" />
+                </View>
               ))}
             </ScrollView>
           ) : (
@@ -69,11 +98,13 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         {/* Minimum Order Value Banner */}
-        <View style={styles.minOrderBanner}>
-          <Ionicons name="megaphone-outline" size={20} color={colors.white} style={styles.minOrderIcon} />
-          <View style={styles.minOrderDot} />
-          <Text style={styles.minOrderText}>Minimum Order Value 2500₹</Text>
-        </View>
+        {settings?.tickerEnabled && settings?.tickerText ? (
+          <View style={styles.minOrderBanner}>
+            <Ionicons name="megaphone-outline" size={20} color={colors.white} style={styles.minOrderIcon} />
+            <View style={styles.minOrderDot} />
+            <MarqueeText>{settings.tickerText}</MarqueeText>
+          </View>
+        ) : null}
 
         {/* Categories */}
         <View style={styles.sectionContainer}>
@@ -117,7 +148,7 @@ export default function HomeScreen({ navigation }) {
         {/* All Products */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeaderRow}>
-             <Text style={styles.sectionTitle}>All Products</Text>
+             <Text style={styles.sectionTitle}>Trending Now</Text>
              <TouchableOpacity><Text style={styles.seeAllText}>See All</Text></TouchableOpacity>
           </View>
           
@@ -128,7 +159,7 @@ export default function HomeScreen({ navigation }) {
                   <Image 
                     source={{ uri: product.images?.[0] || 'https://via.placeholder.com/150' }} 
                     style={styles.productImage} 
-                    resizeMode="cover" 
+                    resizeMode="contain" 
                   />
                   <TouchableOpacity style={styles.heartButton}>
                     <Ionicons name="heart-outline" size={20} color={colors.gray500} />
@@ -175,23 +206,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  logoContainer: {
-    width: 36,
-    height: 36,
-    backgroundColor: '#FFE0C2',
-    borderWidth: 2,
-    borderColor: colors.primary,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    transform: [{ rotate: '45deg' }],
-    marginRight: 12,
-  },
-  logoText: {
-    color: colors.primary,
-    fontWeight: 'bold',
-    fontSize: 18,
-    transform: [{ rotate: '-45deg' }],
+  headerLogo: {
+    width: 38,
+    height: 38,
+    marginRight: 8,
+    resizeMode: 'contain',
   },
   headerTitle: {
     fontSize: 22,
@@ -219,7 +238,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -2,
     right: -4,
-    backgroundColor: '#F44336',
+    backgroundColor: '#FF6B00',
     width: 18,
     height: 18,
     borderRadius: 9,

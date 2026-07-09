@@ -10,7 +10,7 @@ router.get('/me', protect, async (req, res) => {
 // PUT update my profile
 router.put('/me', protect, async (req, res, next) => {
   try {
-    const allowedFields = ['name', 'photo', 'fcmToken'];
+    const allowedFields = ['name', 'email', 'pincode', 'photo', 'fcmToken'];
     const update = {};
     allowedFields.forEach(f => { if (req.body[f] !== undefined) update[f] = req.body[f]; });
     const user = await User.findByIdAndUpdate(req.user._id, update, { new: true, runValidators: true });

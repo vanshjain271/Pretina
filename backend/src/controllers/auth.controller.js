@@ -17,20 +17,48 @@ const signJwt = (id) => {
  */
 exports.firebaseLogin = async (req, res, next) => {
   try {
-    if (!firebaseInitialized) {
-      return res.status(503).json({
-        success: false,
-        message: 'Firebase Auth is not yet configured. Contact administrator.',
-      });
-    }
-
     const { idToken, fcmToken } = req.body;
-    if (!idToken) {
-      return res.status(400).json({ success: false, message: 'Firebase ID token is required.' });
+    let decoded;
+    if (!firebaseInitialized && process.env.NODE_ENV === 'development') {
+      // MOCK for development if service account is missing
+      console.warn('⚠️ MOCK FIREBASE VERIFICATION: Using dummy user since Firebase Admin is not configured.');
+      if (idToken) {
+        // Decode without verifying (development only)
+        const base64Url = idToken.split('.')[1];
+        if (base64Url) {
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const jsonPayload = Buffer.from(base64, 'base64').toString('utf8');
+          const payload = JSON.parse(jsonPayload);
+          decoded = {
+            uid: payload.uid || payload.user_id || 'mock-uid-' + Math.random().toString(36).substring(7),
+            phone_number: payload.phone_number || '+919999999999',
+            name: payload.name || 'Mock User',
+            picture: payload.picture || ''
+          };
+        }
+      }
+      
+      if (!decoded) {
+        decoded = {
+          uid: 'mock-uid-' + Math.random().toString(36).substring(7),
+          phone_number: '+91' + '9999999999', // dummy
+          name: 'Mock User',
+          picture: ''
+        };
+      }
+    } else {
+      if (!firebaseInitialized) {
+        return res.status(503).json({
+          success: false,
+          message: 'Firebase Auth is not yet configured. Contact administrator.',
+        });
+      }
+      if (!idToken) {
+        return res.status(400).json({ success: false, message: 'Firebase ID token is required.' });
+      }
+      decoded = await admin.auth().verifyIdToken(idToken);
     }
-
-    // Verify the Firebase ID token
-    const decoded = await admin.auth().verifyIdToken(idToken);
+    
     const { uid, phone_number, name, picture } = decoded;
 
     if (!phone_number) {
