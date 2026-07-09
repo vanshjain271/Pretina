@@ -14,13 +14,13 @@ export const duplicateProduct = (id) => api.post(`/products/${id}/duplicate`);
 export const getLowStockProducts = () => api.get('/products/admin/low-stock');
 
 // ── Categories ────────────────────────────────────────────────────
-export const getCategories = () => api.get('/categories');
+export const getCategories = (params) => api.get('/categories', { params });
 export const createCategory = (data) => api.post('/categories', data);
 export const updateCategory = (id, data) => api.put(`/categories/${id}`, data);
 export const deleteCategory = (id) => api.delete(`/categories/${id}`);
 
 // ── Brands ────────────────────────────────────────────────────────
-export const getBrands = () => api.get('/brands');
+export const getBrands = (params) => api.get('/brands', { params });
 export const createBrand = (data) => api.post('/brands', data);
 export const updateBrand = (id, data) => api.put(`/brands/${id}`, data);
 export const deleteBrand = (id) => api.delete(`/brands/${id}`);
@@ -64,7 +64,7 @@ export const deleteEmployee = (id) => api.delete(`/employees/${id}`);
 export const toggleEmployeeStatus = (id) => api.patch(`/employees/${id}/toggle`);
 
 // ── Banners ───────────────────────────────────────────────────────
-export const getBanners = () => api.get('/banners/all');
+export const getBanners = (params) => api.get('/banners/all', { params });
 export const createBanner = (data) => api.post('/banners', data);
 export const updateBanner = (id, data) => api.put(`/banners/${id}`, data);
 export const deleteBanner = (id) => api.delete(`/banners/${id}`);

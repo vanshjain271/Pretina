@@ -18,7 +18,7 @@ export default function Categories() {
   const [preview, setPreview] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const load = async () => { setLoading(true); try { const { data } = await getCategories(); setItems(data.data); } catch {} finally { setLoading(false); } };
+  const load = async () => { setLoading(true); try { const { data } = await getCategories({ t: Date.now() }); setItems(data.data); } catch {} finally { setLoading(false); } };
   useEffect(() => { load(); }, []);
 
   const openAdd = () => { setForm(EMPTY); setImgFile(null); setPreview(''); setDialog('add'); };

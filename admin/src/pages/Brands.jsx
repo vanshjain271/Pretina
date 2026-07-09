@@ -17,7 +17,7 @@ export default function Brands() {
   const [preview, setPreview] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const load = async () => { setLoading(true); try { const { data } = await getBrands(); setItems(data.data); } catch {} finally { setLoading(false); } };
+  const load = async () => { setLoading(true); try { const { data } = await getBrands({ t: Date.now() }); setItems(data.data); } catch {} finally { setLoading(false); } };
   useEffect(() => { load(); }, []);
 
   const handleSave = async () => {
