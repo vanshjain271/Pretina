@@ -28,7 +28,10 @@ export default function Categories() {
     setSaving(true);
     try {
       const fd = new FormData();
-      Object.entries(form).forEach(([k,v]) => fd.append(k, v));
+      Object.entries(form).forEach(([k,v]) => {
+        if (k === 'parentCategory' && !v) return;
+        fd.append(k, v);
+      });
       if (imgFile) fd.append('image', imgFile);
       if (dialog === 'add') { await createCategory(fd); toast.success('Category created!'); }
       else { await updateCategory(dialog._id, fd); toast.success('Category updated!'); }

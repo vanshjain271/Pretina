@@ -1,9 +1,29 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, Image, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
+import {
+  useGetBannersQuery,
+  useGetCategoriesQuery,
+  useGetBrandsQuery,
+  useGetHomepageProductsQuery
+} from '../../store/apiSlice';
+
+
+const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }) {
-  // Temporary placeholders for structure
+  const { data: bannersRes, isLoading: loadingBanners } = useGetBannersQuery('home');
+  const { data: categoriesRes, isLoading: loadingCategories } = useGetCategoriesQuery();
+  const { data: brandsRes, isLoading: loadingBrands } = useGetBrandsQuery();
+  const { data: productsRes, isLoading: loadingProducts } = useGetHomepageProductsQuery();
+
+  const banners = bannersRes?.data || [];
+  const categories = categoriesRes?.data || [];
+  const brands = brandsRes?.data || [];
+  // For products, we use the first section (e.g., featured or newArrivals)
+  const products = productsRes?.data?.newArrivals || productsRes?.data?.featured || [];
+
   const renderHeader = () => (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
@@ -13,11 +33,14 @@ export default function HomeScreen({ navigation }) {
         <Text style={styles.headerTitle}>Pretina</Text>
       </View>
       <View style={styles.headerRight}>
-        <TouchableOpacity style={styles.iconButton}>
-          <Text>💬</Text>
+        <TouchableOpacity style={styles.chatButton}>
+          <Ionicons name="logo-whatsapp" size={22} color={colors.white} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('Cart')}>
-          <Text>🛒</Text>
+          <Ionicons name="cart-outline" size={26} color={colors.textPrimaryLight} />
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>8</Text>
+          </View>
         </TouchableOpacity>
       </View>
     </View>
@@ -27,43 +50,109 @@ export default function HomeScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       {renderHeader()}
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Marquee / Ticker */}
-        <View style={styles.tickerContainer}>
-          <Text style={styles.tickerText}>📣 Welcome to Pretina! Buy more, save more.</Text>
-        </View>
-
-        {/* Banners Placeholder */}
+        
+        {/* Banners Carousel */}
         <View style={styles.bannerContainer}>
-          <Text style={styles.placeholderText}>Banners Carousel</Text>
+          {loadingBanners ? (
+            <ActivityIndicator size="large" color={colors.primary} />
+          ) : banners.length > 0 ? (
+            <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
+              {banners.map((banner) => (
+                <Image key={banner._id} source={{ uri: banner.image }} style={styles.bannerImage} resizeMode="cover" />
+              ))}
+            </ScrollView>
+          ) : (
+             <View style={styles.bannerPlaceholder}>
+                <Text style={styles.placeholderText}>No Banners Available</Text>
+             </View>
+          )}
         </View>
 
-        {/* Categories Placeholder */}
+        {/* Minimum Order Value Banner */}
+        <View style={styles.minOrderBanner}>
+          <Ionicons name="megaphone-outline" size={20} color={colors.white} style={styles.minOrderIcon} />
+          <View style={styles.minOrderDot} />
+          <Text style={styles.minOrderText}>Minimum Order Value 2500₹</Text>
+        </View>
+
+        {/* Categories */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Shop by Category</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-             <View style={styles.categoryItem}><Text>Cat 1</Text></View>
-             <View style={styles.categoryItem}><Text>Cat 2</Text></View>
-             <View style={styles.categoryItem}><Text>Cat 3</Text></View>
-          </ScrollView>
+          {loadingCategories ? <ActivityIndicator color={colors.primary} /> : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
+              {categories.map(cat => (
+                <TouchableOpacity key={cat._id} style={styles.categoryWrap}>
+                  <View style={styles.categoryItem}>
+                    {cat.image ? (
+                      <Image source={{ uri: cat.image }} style={styles.categoryImage} resizeMode="contain" />
+                    ) : (
+                      <Ionicons name="image-outline" size={30} color={colors.gray400} />
+                    )}
+                  </View>
+                  <Text style={styles.categoryName} numberOfLines={1}>{cat.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
         </View>
 
-        {/* Brands Placeholder */}
+        {/* Brands */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Shop by Brand</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-             <View style={styles.brandItem}><Text>Brand 1</Text></View>
-             <View style={styles.brandItem}><Text>Brand 2</Text></View>
-          </ScrollView>
+          {loadingBrands ? <ActivityIndicator color={colors.primary} /> : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
+              {brands.map(brand => (
+                <TouchableOpacity key={brand._id} style={styles.brandItem}>
+                  {brand.logo ? (
+                     <Image source={{ uri: brand.logo }} style={styles.brandLogo} resizeMode="contain" />
+                  ) : (
+                     <Text style={styles.brandNameText}>{brand.name}</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
         </View>
 
-        {/* Products Placeholder */}
+        {/* All Products */}
         <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>All Products</Text>
-          <View style={styles.productGrid}>
-             <View style={styles.productCard}><Text>Prod 1</Text></View>
-             <View style={styles.productCard}><Text>Prod 2</Text></View>
+          <View style={styles.sectionHeaderRow}>
+             <Text style={styles.sectionTitle}>All Products</Text>
+             <TouchableOpacity><Text style={styles.seeAllText}>See All</Text></TouchableOpacity>
           </View>
+          
+          {loadingProducts ? <ActivityIndicator color={colors.primary} /> : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
+              {products.map(product => (
+                <TouchableOpacity key={product._id} style={styles.productCard}>
+                  <Image 
+                    source={{ uri: product.images?.[0] || 'https://via.placeholder.com/150' }} 
+                    style={styles.productImage} 
+                    resizeMode="cover" 
+                  />
+                  <TouchableOpacity style={styles.heartButton}>
+                    <Ionicons name="heart-outline" size={20} color={colors.gray500} />
+                  </TouchableOpacity>
+                  
+                  <View style={styles.productInfo}>
+                    <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
+                    <View style={styles.ratingRow}>
+                      <Ionicons name="star" size={14} color="#FFA000" />
+                      <Text style={styles.ratingText}>4.9 (220)</Text>
+                    </View>
+                    <View style={styles.priceRow}>
+                      <Text style={styles.priceText}>₹{product.salePrice}</Text>
+                      <TouchableOpacity style={styles.addButton}>
+                        <Ionicons name="add" size={20} color={colors.white} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
         </View>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -80,103 +169,257 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    backgroundColor: '#FFF1E6', // Soft orange background for header based on screenshot
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   logoContainer: {
-    width: 40,
-    height: 40,
-    backgroundColor: colors.primary,
-    borderRadius: 10,
+    width: 36,
+    height: 36,
+    backgroundColor: '#FFE0C2',
+    borderWidth: 2,
+    borderColor: colors.primary,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    transform: [{ rotate: '45deg' }],
+    marginRight: 12,
   },
   logoText: {
-    color: colors.white,
+    color: colors.primary,
     fontWeight: 'bold',
-    fontSize: 20,
+    fontSize: 18,
+    transform: [{ rotate: '-45deg' }],
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginLeft: 12,
+    fontSize: 22,
+    fontWeight: '900',
     color: colors.textPrimaryLight,
   },
   headerRight: {
     flexDirection: 'row',
+    alignItems: 'center',
+  },
+  chatButton: {
+    backgroundColor: '#2CD986', // Green chat icon background
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   iconButton: {
-    marginLeft: 16,
+    position: 'relative',
     padding: 4,
+  },
+  badge: {
+    position: 'absolute',
+    top: -2,
+    right: -4,
+    backgroundColor: '#F44336',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FFF',
+  },
+  badgeText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   scrollContent: {
     paddingBottom: 24,
   },
-  tickerContainer: {
-    backgroundColor: colors.surfaceLight,
-    padding: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  tickerText: {
-    color: colors.primary,
-    fontWeight: '500',
-  },
   bannerContainer: {
     height: 180,
-    backgroundColor: colors.gray200,
-    margin: 16,
-    borderRadius: 8,
+    width: '100%',
+    backgroundColor: colors.gray100,
+    marginTop: 10,
+  },
+  bannerPlaceholder: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  bannerImage: {
+    width: width,
+    height: 180,
+  },
+  minOrderBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF7B3B', // Brighter orange
+    marginHorizontal: 16,
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  minOrderIcon: {
+    marginRight: 12,
+  },
+  minOrderDot: {
+    width: 4,
+    height: 4,
+    backgroundColor: '#FFF',
+    borderRadius: 2,
+    marginRight: 12,
+  },
+  minOrderText: {
+    color: '#FFF',
+    fontWeight: '700',
+    fontSize: 15,
   },
   sectionContainer: {
-    marginTop: 24,
-    paddingHorizontal: 16,
+    marginTop: 28,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.textPrimaryLight,
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
     marginBottom: 12,
   },
-  categoryItem: {
-    width: 80,
-    height: 80,
-    backgroundColor: colors.gray100,
-    borderRadius: 40,
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.textPrimaryLight,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  seeAllText: {
+    color: colors.primary,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  hScroll: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  categoryWrap: {
+    alignItems: 'center',
     marginRight: 16,
+    width: 80,
+  },
+  categoryItem: {
+    width: 70,
+    height: 70,
+    backgroundColor: '#FFF',
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    marginBottom: 8,
+  },
+  categoryImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+  },
+  categoryName: {
+    fontSize: 12,
+    color: colors.textPrimaryLight,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   brandItem: {
-    width: 120,
-    height: 60,
-    backgroundColor: colors.gray100,
-    borderRadius: 8,
-    marginRight: 16,
+    height: 40,
+    minWidth: 80,
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 16,
   },
-  productGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+  brandLogo: {
+    width: 80,
+    height: 40,
+  },
+  brandNameText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textPrimaryLight,
+    textTransform: 'uppercase',
   },
   productCard: {
-    width: '48%',
-    height: 200,
+    width: 160,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    marginRight: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+    position: 'relative',
+  },
+  productImage: {
+    width: '100%',
+    height: 150,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
     backgroundColor: colors.gray100,
+  },
+  heartButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#FFF',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  productInfo: {
+    padding: 12,
+  },
+  productName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimaryLight,
+    marginBottom: 6,
+    height: 36, // Force two lines height
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  ratingText: {
+    fontSize: 12,
+    color: colors.textSecondaryLight,
+    marginLeft: 4,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  priceText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.primary,
+  },
+  addButton: {
+    backgroundColor: colors.primary,
+    width: 28,
+    height: 28,
     borderRadius: 8,
-    marginBottom: 16,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  placeholderText: {
-    color: colors.gray500,
-  }
 });

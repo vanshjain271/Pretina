@@ -6,6 +6,11 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FF6600"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.pretina.ajcompany"
@@ -34,7 +39,8 @@
           }
         }
       ],
-      "@react-native-firebase/messaging"
+      "@react-native-firebase/messaging",
+      "expo-splash-screen"
     ]
   }
 }
