@@ -10,7 +10,7 @@ const Cart = require('../models/Cart');
 const Product = require('../models/Product');
 
 // Pretina statuses that count as "successful" revenue
-const REVENUE_STATUSES = ['confirmed', 'packed', 'shipped', 'delivered'];
+const REVENUE_STATUSES = ['pending', 'confirmed', 'packed', 'shipped', 'delivered'];
 
 class AnalyticsService {
   // ─────────────────────────────────────────────────────────────────

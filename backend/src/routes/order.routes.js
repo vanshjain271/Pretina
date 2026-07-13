@@ -229,7 +229,8 @@ router.get('/', protect, staffOnly, async (req, res, next) => {
 router.get('/abandoned', protect, staffOnly, async (req, res, next) => {
   try {
     const { dateFrom, dateTo } = req.query;
-    const thresholdTime = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    // 3 minutes threshold as requested
+    const thresholdTime = new Date(Date.now() - 3 * 60 * 1000);
     
     const filter = {
       'items.0': { $exists: true },
