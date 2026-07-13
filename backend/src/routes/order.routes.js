@@ -59,6 +59,8 @@ router.post('/', protect, async (req, res, next) => {
     // Validate payment method
     if (paymentMethod === 'razorpay' && !settings?.paymentRazorpayEnabled)
       return res.status(400).json({ success: false, message: 'Razorpay is currently disabled.' });
+    if (paymentMethod === 'partial_razorpay' && !settings?.advancePartialPayment)
+      return res.status(400).json({ success: false, message: 'Partial payment is currently disabled.' });
     if (paymentMethod === 'qr_upi' && !settings?.paymentQrEnabled)
       return res.status(400).json({ success: false, message: 'QR/UPI payment is currently disabled.' });
     if (paymentMethod === 'cod' && !settings?.paymentCodEnabled)
@@ -277,13 +279,17 @@ router.get('/export', protect, staffOnly, async (req, res, next) => {
 });
 
 // GET /orders/:id/invoice-pdf  — download invoice PDF  *** MUST be before /:id ***
-router.get('/:id/invoice-pdf', protect, staffOnly, async (req, res, next) => {
+router.get('/:id/invoice-pdf', protect, async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id)
       .populate('user', 'name phone email')
       .populate('items.product', 'name sku images')
       .lean();
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    
+    if (req.user.role === 'customer' && order.user._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized.' });
+    }
 
     const pdfBuffer = await generateInvoicePDF(order);
     res.setHeader('Content-Type', 'application/pdf');
@@ -311,6 +317,35 @@ router.get('/:id/packing-slip', protect, staffOnly, async (req, res, next) => {
     console.error('Packing Slip PDF error:', err);
     res.status(500).json({ success: false, message: 'Failed to generate packing slip' });
   }
+});
+
+// POST /orders/:id/cancel  — customer cancels their own order
+router.post('/:id/cancel', protect, async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found.' });
+    if (order.user.toString() !== req.user._id.toString())
+      return res.status(403).json({ success: false, message: 'Not authorized.' });
+    if (order.status !== 'pending' && order.status !== 'confirmed')
+      return res.status(400).json({ success: false, message: 'Order cannot be cancelled at this stage.' });
+
+    order.status = 'cancelled';
+    order.statusHistory.push({
+      status: 'cancelled',
+      note: 'Order cancelled by customer.',
+      updatedBy: req.user._id,
+    });
+    await order.save();
+
+    // Notify admins (optional)
+    NotificationService.notifyAdmins(
+      '❌ Order Cancelled',
+      `Order ${order.orderNumber} was cancelled by the customer.`,
+      { type: 'ORDER_CANCELLED', orderId: String(order._id) }
+    ).catch(e => console.error('[order.routes] Admin notify failed:', e.message));
+
+    res.json({ success: true, message: 'Order cancelled successfully.', data: order });
+  } catch (err) { next(err); }
 });
 
 // GET /orders/:id  — single order (customer sees own, admin sees all)

@@ -55,7 +55,7 @@ exports.getHomepageProducts = async (req, res, next) => {
 exports.getProducts = async (req, res, next) => {
   try {
     const {
-      page = 1, limit = 20,
+      page = 1, limit = 1000,
       category, brand, search,
       minPrice, maxPrice,
       sortBy = 'createdAt', sortOrder = 'desc',
@@ -81,9 +81,10 @@ exports.getProducts = async (req, res, next) => {
       if (maxPrice) filter.salePrice.$lte = Number(maxPrice);
     }
     if (search) {
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { sku:  { $regex: search, $options: 'i' } },
+        { name: { $regex: escapedSearch, $options: 'i' } },
+        { sku:  { $regex: escapedSearch, $options: 'i' } },
       ];
     }
 
