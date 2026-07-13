@@ -27,10 +27,16 @@ router.post('/items', protect, async (req, res, next) => {
     }
 
     let price = product.salePrice;
+    let finalVariantName = variantName || '';
     if (variantId) {
       const variant = product.variants.id(variantId);
       if (!variant) return res.status(400).json({ success: false, message: 'Variant not found.' });
-      price = variant.price;
+      price = variant.price || variant.salePrice || product.salePrice;
+      let vNames = [];
+      if (variant.name) vNames.push(variant.name);
+      const varColor = variant.color || product.color;
+      if (varColor) vNames.push(`Color: ${varColor}`);
+      finalVariantName = vNames.length ? vNames.join(' - ') : finalVariantName;
     }
 
     const cart = await getOrCreateCart(req.user._id);
@@ -45,7 +51,7 @@ router.post('/items', protect, async (req, res, next) => {
       cart.items[existingIdx].quantity += quantity;
       cart.items[existingIdx].price = price;
     } else {
-      cart.items.push({ product: productId, quantity, price, variantId, variantName: variantName || '' });
+      cart.items.push({ product: productId, quantity, price, variantId, variantName: finalVariantName });
     }
 
     await cart.save();
@@ -110,7 +116,11 @@ router.put('/sync', protect, async (req, res, next) => {
         const variant = product.variants.id(item.variant);
         if (variant) {
           price = variant.price || variant.salePrice || product.salePrice;
-          variantName = variant.name || variant.color || variantName;
+          let vNames = [];
+          if (variant.name) vNames.push(variant.name);
+          const varColor = variant.color || product.color;
+          if (varColor) vNames.push(`Color: ${varColor}`);
+          variantName = vNames.length ? vNames.join(' - ') : variantName;
         }
       }
 

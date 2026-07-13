@@ -91,8 +91,9 @@ router.post('/', protect, async (req, res, next) => {
         // Build variant display name
         const parts = [];
         if (variant.name) parts.push(variant.name);
-        if (variant.color) parts.push(variant.color);
-        variantName = parts.join(' / ');
+        const varColor = variant.color || product.color;
+        if (varColor) parts.push(`Color: ${varColor}`);
+        variantName = parts.join(' - ');
       }
 
       // ── Apply bulk pricing tier ────────────────────────────────
@@ -194,8 +195,9 @@ router.post('/', protect, async (req, res, next) => {
 // GET /orders  — all orders list (admin/staff)
 router.get('/', protect, staffOnly, async (req, res, next) => {
   try {
-    const { page = 1, limit = 20, status, paymentMethod, paymentStatus, search, dateFrom, dateTo } = req.query;
+    const { page = 1, limit = 20, status, paymentMethod, paymentStatus, search, dateFrom, dateTo, user } = req.query;
     const filter = {};
+    if (user)          filter.user = user;
     if (status)        filter.status = status;
     if (paymentMethod) filter.paymentMethod = paymentMethod;
     if (paymentStatus) filter.paymentStatus = paymentStatus;
@@ -559,7 +561,20 @@ router.post('/manual', protect, staffOnly, async (req, res, next) => {
         name:       product.name,
         image:      product.images?.[0] || '',
         variantId:  item.variantId || null,
-        variantName:item.variantName || '',
+        variantName: item.variantName || (() => {
+          let vName = '';
+          if (item.variantId) {
+            const v = product.variants?.id(item.variantId);
+            if (v) {
+              const parts = [];
+              if (v.name) parts.push(v.name);
+              const c = v.color || product.color;
+              if (c) parts.push(`Color: ${c}`);
+              vName = parts.join(' - ');
+            }
+          }
+          return vName;
+        })(),
         price,
         mrp:        product.price || product.salePrice,
         quantity:   Number(item.quantity),

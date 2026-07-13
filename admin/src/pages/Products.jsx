@@ -407,7 +407,11 @@ export default function Products() {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" fontWeight={600}>{p.name}</Typography>
-                    {p.sku && <Typography variant="caption" color="text.secondary">SKU: {p.sku}</Typography>}
+                    {p.sku && <Typography variant="caption" color="text.secondary" display="block">SKU: {p.sku}</Typography>}
+                    {p.color && <Typography variant="caption" color="text.secondary" display="block">Color: {p.color}</Typography>}
+                    {p.modelSeries && <Typography variant="caption" color="text.secondary" display="block">Model: {p.modelSeries}</Typography>}
+                    {p.warranty && <Typography variant="caption" color="text.secondary" display="block">Warranty: {p.warranty}</Typography>}
+                    {p.youtubeUrl && <Typography variant="caption" color="error.main" display="block">YouTube: {p.youtubeUrl}</Typography>}
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" fontWeight={600} color="#FF6B00">₹{p.salePrice}</Typography>

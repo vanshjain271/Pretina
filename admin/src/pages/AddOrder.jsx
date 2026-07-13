@@ -115,12 +115,13 @@ export default function AddOrder() {
     products.forEach(p => {
       if (p.hasVariants && p.variants?.length > 0) {
         p.variants.forEach(v => {
-          options.push({
-            _id: p._id,
-            variantId: v._id,
-            name: p.name,
-            variantName: `${v.name}${v.color ? ` - ${v.color}` : ''}`,
-            displayLabel: `${p.name} - ${v.name}${v.color ? ` (${v.color})` : ''}`,
+            const varColor = v.color || p.color || '';
+            options.push({
+              _id: p._id,
+              variantId: v._id,
+              name: p.name,
+              variantName: `${v.name}${varColor ? ` - Color: ${varColor}` : ''}`,
+              displayLabel: `${p.name} - ${v.name}${varColor ? ` (Color: ${varColor})` : ''}`,
             price: v.salePrice || v.mrp || p.salePrice || p.price || 0,
             image: v.images?.[0] || p.images?.[0]
           });
