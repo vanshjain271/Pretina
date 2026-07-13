@@ -46,7 +46,6 @@ export default function CheckoutScreen({ navigation }) {
   const settings = settingsData?.data || {};
   const checkoutMessage = settings.orderNotes || "";
   const qrImageUrl = settings.qrImageUrl || 'https://dummyimage.com/200x200/000/fff&text=UPI+QR';
-  const razorpayKey = settings.razorpayKeyId || '';
 
   const deliveryFee = (settings.freeDeliveryAbove > 0 && totalAmount >= settings.freeDeliveryAbove)
     ? 0
@@ -117,11 +116,11 @@ export default function CheckoutScreen({ navigation }) {
         const options = {
           description: 'Payment for your order',
           image: 'https://your-logo-url.png', // Optional
-          currency: rpOrderRes.data.currency,
-          key: razorpayKey,
-          amount: rpOrderRes.data.amount,
+          currency: rpOrderRes.currency || 'INR',
+          key: rpOrderRes.keyId,
+          amount: rpOrderRes.amount,
           name: 'Pretina',
-          order_id: rpOrderRes.data.id,
+          order_id: rpOrderRes.razorpayOrderId,
           theme: { color: colors.primary }
         };
 
