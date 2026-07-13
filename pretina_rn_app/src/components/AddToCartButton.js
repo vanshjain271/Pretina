@@ -2,17 +2,23 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, TextInput, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
 import { addToCart, updateQuantity, selectItemQuantity, setCartVisible } from '../store/cartSlice';
 import { colors } from '../theme/colors';
 
 export default function AddToCartButton({ product, variant }) {
   const dispatch = useDispatch();
+  const navigation = useNavigation();
   const quantity = useSelector((state) => selectItemQuantity(state, product._id, variant?._id));
   const minQty = product.minOrderQty || 1;
   const [inputValue, setInputValue] = useState('');
   const [isEditing, setIsEditing] = useState(false);
 
   const handleAdd = () => {
+    if (product.variants && product.variants.length > 0 && !variant) {
+      navigation.navigate('ProductDetail', { productId: product._id });
+      return;
+    }
     dispatch(addToCart({ product, variant }));
   };
 

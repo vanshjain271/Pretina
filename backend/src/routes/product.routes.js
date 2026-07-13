@@ -6,10 +6,11 @@ const { upload } = require('../services/s3.service');
 // ── Cache Middleware ──────────────────────────────────────
 const setListCache = (req, res, next) => { res.set('Cache-Control', 'private, max-age=60'); next(); };
 const setItemCache = (req, res, next) => { res.set('Cache-Control', 'private, max-age=300'); next(); };
+const setNoCache = (req, res, next) => { res.set('Cache-Control', 'no-store, max-age=0'); next(); };
 
 // ── Public Routes ─────────────────────────────────────────
 // NOTE: specific routes must come BEFORE /:id
-router.get('/homepage', setListCache, ctrl.getHomepageProducts);   // Dynamic randomized sections
+router.get('/homepage', setNoCache, ctrl.getHomepageProducts);   // Dynamic randomized sections
 router.get('/search',   setListCache, ctrl.searchProducts);         // Full-text search
 router.get('/',         setListCache, ctrl.getProducts);             // Paginated list
 router.get('/:id',      setItemCache, ctrl.getProduct);              // Single product

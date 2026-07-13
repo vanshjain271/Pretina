@@ -35,6 +35,7 @@ export const apiSlice = createApi({
     }),
     getHomepageProducts: builder.query({
       query: () => '/products/homepage',
+      keepUnusedDataFor: 0,
     }),
     getProductById: builder.query({
       query: (id) => `/products/${id}`,
