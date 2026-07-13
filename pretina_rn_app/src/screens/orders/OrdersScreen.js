@@ -23,7 +23,7 @@ export default function OrdersScreen({ navigation }) {
       }
       const token = await user.getIdToken();
       
-      const uri = `${API_BASE_URL}/orders/${orderId}/invoice-pdf?token=${token}`;
+      const uri = `${API_BASE_URL}/orders/public-pdf/${orderId}`;
       const supported = await Linking.canOpenURL(uri);
       
       if (supported) {

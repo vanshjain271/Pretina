@@ -278,6 +278,26 @@ router.get('/export', protect, staffOnly, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /orders/public-pdf/:id — identical to youthqitapp for seamless browser downloads without headers
+router.get('/public-pdf/:id', async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate('user', 'name phone email')
+      .populate('items.product', 'name sku images')
+      .lean();
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    const pdfBuffer = await generateInvoicePDF(order);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename=invoice-${order.orderNumber}.pdf`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.end(pdfBuffer);
+  } catch (err) {
+    console.error('Invoice generation error:', err);
+    res.status(500).json({ success: false, message: 'Failed to generate invoice' });
+  }
+});
+
 // GET /orders/:id/invoice-pdf  — download invoice PDF  *** MUST be before /:id ***
 router.get('/:id/invoice-pdf', protect, async (req, res, next) => {
   try {

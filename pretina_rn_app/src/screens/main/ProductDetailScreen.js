@@ -184,6 +184,43 @@ export default function ProductDetailScreen({ route, navigation }) {
           </TouchableOpacity>
         )}
 
+        {/* Additional Info Table */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Specifications</Text>
+          <View style={styles.specTable}>
+            {product.sku ? (
+              <View style={styles.specRow}>
+                <Text style={styles.specLabel}>SKU</Text>
+                <Text style={styles.specValue}>{product.sku}</Text>
+              </View>
+            ) : null}
+            {product.color ? (
+              <View style={styles.specRow}>
+                <Text style={styles.specLabel}>Color</Text>
+                <Text style={styles.specValue}>{product.color}</Text>
+              </View>
+            ) : null}
+            {product.modelSeries ? (
+              <View style={styles.specRow}>
+                <Text style={styles.specLabel}>Model Series</Text>
+                <Text style={styles.specValue}>{product.modelSeries}</Text>
+              </View>
+            ) : null}
+            {product.warranty ? (
+              <View style={styles.specRow}>
+                <Text style={styles.specLabel}>Warranty</Text>
+                <Text style={styles.specValue}>{product.warranty}</Text>
+              </View>
+            ) : null}
+            {product.paymentMode && product.paymentMode !== 'default' ? (
+              <View style={styles.specRow}>
+                <Text style={styles.specLabel}>Payment Options</Text>
+                <Text style={styles.specValue}>{product.paymentMode === 'cod' ? 'Cash on Delivery (COD)' : 'Prepaid Only'}</Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
+
         {/* Details & Description */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Product Details</Text>
@@ -446,10 +483,36 @@ const styles = StyleSheet.create({
     borderColor: '#FFCCCC',
   },
   youtubeText: {
+    color: '#FF0000',
+    fontSize: 14,
+    fontWeight: '600',
     marginLeft: 8,
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#D20000',
+  },
+  specTable: {
+    backgroundColor: '#fafafa',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#eee',
+    overflow: 'hidden',
+  },
+  specRow: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  specLabel: {
+    flex: 1,
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  specValue: {
+    flex: 2,
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '400',
   },
   description: {
     fontSize: 15,
