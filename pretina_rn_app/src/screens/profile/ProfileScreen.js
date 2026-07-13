@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Alert, Modal, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Alert, Modal, TextInput, ActivityIndicator, Linking } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import { colors } from '../../theme/colors';
-import { useGetMyProfileQuery, useUpdateProfileMutation } from '../../store/apiSlice';
+import { useGetMyProfileQuery, useUpdateProfileMutation, useGetSettingsQuery } from '../../store/apiSlice';
+import { API_BASE_URL } from '../../config';
 
 export default function ProfileScreen({ navigation }) {
   const { data: profileData, isLoading: profileLoading } = useGetMyProfileQuery();
+  const { data: settingsData } = useGetSettingsQuery();
   const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation();
   
   const userProfile = profileData?.data || {};
+  const settings = settingsData?.data || {};
 
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editName, setEditName] = useState('');
@@ -30,12 +33,66 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "Are you sure you want to permanently delete your account? This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const user = auth().currentUser;
+              if (user) {
+                const token = await user.getIdToken();
+                const res = await fetch(`${API_BASE_URL}/auth/delete-account`, {
+                  method: 'DELETE',
+                  headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.success) {
+                  await auth().signOut();
+                } else {
+                  Alert.alert("Error", data.message || "Failed to delete account from server.");
+                }
+              }
+            } catch (e) {
+              Alert.alert('Error', 'Could not delete account.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleSupportLink = (type) => {
+    if (type === 'call') {
+      Linking.openURL(`tel:${settings.supportPhone || '+918169902291'}`);
+    } else if (type === 'whatsapp') {
+      Linking.openURL(`whatsapp://send?phone=${settings.whatsappNumber || '+918169902291'}&text=Hi Support`);
+    } else if (type === 'email') {
+      Linking.openURL(`mailto:${settings.supportEmail || 'parinenterprise456@gmail.com'}`);
+    } else if (type === 'website') {
+      Linking.openURL(settings.websiteUrl || 'https://www.pretina.in');
+    }
+  };
+
   const menuItems = [
     { title: 'My Orders', action: () => navigation.navigate('Orders') },
-    { title: 'Manage Addresses', action: () => Alert.alert('Nav', 'Addresses') },
-    { title: 'Notifications', action: () => Alert.alert('Nav', 'Notifications') },
-    { title: 'Help & Support', action: () => Alert.alert('Nav', 'Support') },
-    { title: 'Dark Mode', action: () => Alert.alert('Info', 'Toggle Theme') },
+    { title: 'Recently Ordered', action: () => navigation.navigate('RecentlyOrdered') },
+    { title: 'Manage Addresses', action: () => navigation.navigate('AddressSelection') },
+    { title: 'Notifications', action: () => navigation.navigate('Notifications') },
+    { title: 'Payment Bank Details', action: () => navigation.navigate('BankDetails') },
+    { title: 'Help & Support (Call Us)', action: () => handleSupportLink('call') },
+    { title: 'WhatsApp Support', action: () => handleSupportLink('whatsapp') },
+    { title: 'Email Support', action: () => handleSupportLink('email') },
+    { title: 'Visit Website', action: () => handleSupportLink('website') },
+    { title: 'Shipping Policy', action: () => navigation.navigate('Policy', { title: 'Shipping Policy', type: 'shippingPolicy' }) },
+    { title: 'Privacy Policy', action: () => navigation.navigate('Policy', { title: 'Privacy Policy', type: 'privacyPolicy' }) },
+    { title: 'Refund Policy', action: () => navigation.navigate('Policy', { title: 'Refund Policy', type: 'refundPolicy' }) },
+    { title: 'Terms & Conditions', action: () => navigation.navigate('Policy', { title: 'Terms & Conditions', type: 'termsAndConditions' }) },
   ];
 
   return (
@@ -69,6 +126,10 @@ export default function ProfileScreen({ navigation }) {
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
+          <Text style={styles.deleteText}>Delete Account</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -226,6 +287,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoutText: {
+    color: colors.textPrimaryLight,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  deleteButton: {
+    marginTop: 12,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.error,
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  deleteText: {
     color: colors.error,
     fontSize: 16,
     fontWeight: 'bold',

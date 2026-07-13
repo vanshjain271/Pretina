@@ -8,10 +8,9 @@ const BORDER = '#E2E8F0';
 
 const COMPANY = {
   name: 'Pretina',
-  tagline: 'Premium Products',
-  address: '123 Pretina Ave, Suite 100',
-  address2: 'New Delhi, India',
-  phone: '+91 9876543210',
+  address: 'A Block 722, Hubtown Gitamandir Bus Station',
+  address2: 'Gita Mandir, Ahmedabad 380001',
+  phone: '+91 8169902291',
   email: 'support@pretina.com',
 };
 

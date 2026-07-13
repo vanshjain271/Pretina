@@ -123,6 +123,9 @@ export const apiSlice = createApi({
         body: verificationData,
       }),
     }),
+    getNotifications: builder.query({
+      query: () => '/notifications',
+    }),
   }),
 });
 
@@ -146,4 +149,5 @@ export const {
   useRegisterFcmTokenMutation,
   useCreateRazorpayOrderMutation,
   useVerifyRazorpayPaymentMutation,
+  useGetNotificationsQuery,
 } = apiSlice;

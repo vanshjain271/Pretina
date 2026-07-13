@@ -3,9 +3,9 @@ const crypto = require('crypto');
 const Order = require('../models/Order');
 const Settings = require('../models/Settings');
 
-const getRazorpayInstance = () => new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
+const getRazorpayInstance = (keyId, keySecret) => new Razorpay({
+  key_id: keyId,
+  key_secret: keySecret,
 });
 
 /**
@@ -38,7 +38,7 @@ exports.createRazorpayOrder = async (req, res, next) => {
       amountToPay = Math.round(advanceAmount * 100);
     }
 
-    const razorpayOrder = await getRazorpayInstance().orders.create({
+    const razorpayOrder = await getRazorpayInstance(settings.razorpayKeyId, settings.razorpayKeySecret).orders.create({
       amount: amountToPay, // Razorpay expects paise
       currency: 'INR',
       receipt: order.orderNumber,
@@ -53,7 +53,7 @@ exports.createRazorpayOrder = async (req, res, next) => {
       razorpayOrderId: razorpayOrder.id,
       amount: razorpayOrder.amount,
       currency: razorpayOrder.currency,
-      keyId: process.env.RAZORPAY_KEY_ID,
+      keyId: settings.razorpayKeyId,
     });
   } catch (err) {
     next(err);
@@ -70,10 +70,15 @@ exports.verifyRazorpayPayment = async (req, res, next) => {
     let order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ success: false, message: 'Order not found.' });
 
+    const settings = await Settings.findById('global');
+    if (!settings?.razorpayKeySecret) {
+      return res.status(400).json({ success: false, message: 'Razorpay secret key is not configured.' });
+    }
+
     // Verify signature
     const body = razorpay_order_id + '|' + razorpay_payment_id;
     const expectedSig = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .createHmac('sha256', settings.razorpayKeySecret)
       .update(body)
       .digest('hex');
 
@@ -96,7 +101,6 @@ exports.verifyRazorpayPayment = async (req, res, next) => {
     if (isPartial) {
       // Calculate what they paid based on Razorpay verification (we could also check razorpay order amount but we know it's the advance)
       let advanceAmount = 0;
-      const settings = await Settings.findById('global');
       if (settings.codAdvanceType === 'percentage') {
         advanceAmount = (order.total * (settings.codAdvancePercentage || 10)) / 100;
       } else {

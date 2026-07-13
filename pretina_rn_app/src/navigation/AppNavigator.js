@@ -29,6 +29,11 @@ import CategoryProductsScreen from '../screens/main/CategoryProductsScreen';
 import BrandProductsScreen from '../screens/main/BrandProductsScreen';
 import SearchProductsScreen from '../screens/main/SearchProductsScreen';
 
+import NotificationsScreen from '../screens/profile/NotificationsScreen';
+import RecentlyOrderedScreen from '../screens/profile/RecentlyOrderedScreen';
+import PolicyScreen from '../screens/profile/PolicyScreen';
+import BankDetailsScreen from '../screens/profile/BankDetailsScreen';
+
 function MainNavigator() {
   usePushNotifications();
   return (
@@ -43,6 +48,10 @@ function MainNavigator() {
       <MainStack.Screen name="CategoryProducts" component={CategoryProductsScreen} />
       <MainStack.Screen name="BrandProducts" component={BrandProductsScreen} />
       <MainStack.Screen name="SearchProducts" component={SearchProductsScreen} />
+      <MainStack.Screen name="Notifications" component={NotificationsScreen} />
+      <MainStack.Screen name="RecentlyOrdered" component={RecentlyOrderedScreen} />
+      <MainStack.Screen name="Policy" component={PolicyScreen} />
+      <MainStack.Screen name="BankDetails" component={BankDetailsScreen} />
     </MainStack.Navigator>
   );
 }

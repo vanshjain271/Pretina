@@ -458,12 +458,6 @@ export default function HomeScreen({ navigation }) {
           
           <View style={styles.footerContactInfo}>
             <View style={styles.footerRow}>
-              <Ionicons name="location-outline" size={20} color={colors.primary} />
-              <Text style={styles.footerText}>
-                A Block 722, Hubtown Gitamandir Bus Station, Gita Mandir, Ahmedabad 380001
-              </Text>
-            </View>
-            <View style={styles.footerRow}>
               <Ionicons name="call-outline" size={20} color={colors.primary} />
               <TouchableOpacity onPress={() => Linking.openURL('tel:+918169902291')}>
                 <Text style={styles.footerTextLink}>+91 8169902291</Text>

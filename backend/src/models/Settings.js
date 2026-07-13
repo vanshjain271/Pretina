@@ -31,6 +31,8 @@ const settingsSchema = new mongoose.Schema({
 
   // ── Payment Methods — Admin toggles these on/off ───────────
   paymentRazorpayEnabled: { type: Boolean, default: true },
+  razorpayKeyId:          { type: String, default: '' },
+  razorpayKeySecret:      { type: String, default: '' },
   paymentQrEnabled:       { type: Boolean, default: true },
   paymentCodEnabled:      { type: Boolean, default: true },
 
@@ -99,8 +101,12 @@ const settingsSchema = new mongoose.Schema({
   bankIfsc:          { type: String, default: '' },
   bankBranch:        { type: String, default: '' },
 
-  // ── Social ─────────────────────────────────────────────────
+  // ── Social / Website ───────────────────────────────────────
+  websiteUrl:     { type: String, default: '' },
   instagramUrl:   { type: String, default: '' },
+  facebookUrl:    { type: String, default: '' },
+  twitterUrl:     { type: String, default: '' },
+  youtubeUrl:     { type: String, default: '' },
   whatsappNumber: { type: String, default: '8169902291' },
 
   // ── App Maintenance ────────────────────────────────────────

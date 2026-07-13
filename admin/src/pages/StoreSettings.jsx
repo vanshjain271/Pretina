@@ -322,6 +322,27 @@ export default function StoreSettings() {
                     </Box>
                     <Switch checked={settings.paymentRazorpayEnabled || false} onChange={e => handleChange('paymentRazorpayEnabled', e.target.checked)} color="primary" />
                   </Box>
+                  
+                  {settings.paymentRazorpayEnabled && (
+                    <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 2, p: 3 }}>
+                      <Stack spacing={3}>
+                        <TextField 
+                          fullWidth 
+                          label="Razorpay Key ID" 
+                          value={settings.razorpayKeyId || ''} 
+                          onChange={e => handleChange('razorpayKeyId', e.target.value)} 
+                          helperText="Find this in your Razorpay Dashboard under API Keys"
+                        />
+                        <TextField 
+                          fullWidth 
+                          label="Razorpay Key Secret" 
+                          type="password"
+                          value={settings.razorpayKeySecret || ''} 
+                          onChange={e => handleChange('razorpayKeySecret', e.target.value)} 
+                        />
+                      </Stack>
+                    </Box>
+                  )}
 
                   {/* Manual QR Code */}
                   <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 2, p: 3 }}>
@@ -392,6 +413,25 @@ export default function StoreSettings() {
                     )}
                   </Box>
 
+                  {/* Bank Details */}
+                  <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 2, p: 3 }}>
+                    <Typography variant="h6" fontWeight={700} mb={3}>Bank Account Details</Typography>
+                    <Grid container spacing={3}>
+                      <Grid item xs={12} md={6}>
+                        <TextField fullWidth label="Bank Name" value={settings.bankName || ''} onChange={e => handleChange('bankName', e.target.value)} />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <TextField fullWidth label="Account Number" value={settings.bankAccountNo || ''} onChange={e => handleChange('bankAccountNo', e.target.value)} />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <TextField fullWidth label="IFSC Code" value={settings.bankIfsc || ''} onChange={e => handleChange('bankIfsc', e.target.value)} />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <TextField fullWidth label="Branch Name" value={settings.bankBranch || ''} onChange={e => handleChange('bankBranch', e.target.value)} />
+                      </Grid>
+                    </Grid>
+                  </Box>
+
                 </Stack>
               )}
 
@@ -407,6 +447,7 @@ export default function StoreSettings() {
                   <Typography variant="h6" fontWeight={700} sx={{ mt: 2 }}>Social Media Links</Typography>
                   <Divider />
                   <Grid container spacing={2}>
+                    <Grid item xs={12} md={6}><TextField fullWidth label="Website URL" value={settings.websiteUrl || ''} onChange={e => handleChange('websiteUrl', e.target.value)} placeholder="https://www.pretina.in" /></Grid>
                     <Grid item xs={12} md={6}><TextField fullWidth label="Instagram URL" value={settings.instagramUrl || ''} onChange={e => handleChange('instagramUrl', e.target.value)} /></Grid>
                     <Grid item xs={12} md={6}><TextField fullWidth label="Facebook URL" value={settings.facebookUrl || ''} onChange={e => handleChange('facebookUrl', e.target.value)} /></Grid>
                     <Grid item xs={12} md={6}><TextField fullWidth label="Twitter/X URL" value={settings.twitterUrl || ''} onChange={e => handleChange('twitterUrl', e.target.value)} /></Grid>
