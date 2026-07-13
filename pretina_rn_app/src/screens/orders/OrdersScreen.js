@@ -23,24 +23,13 @@ export default function OrdersScreen({ navigation }) {
       }
       const token = await user.getIdToken();
       
-      const uri = `${API_BASE_URL}/orders/${orderId}/invoice-pdf`;
-      const fileUri = FileSystem.documentDirectory + `Pretina_Invoice_${orderId.slice(-6)}.pdf`;
+      const uri = `${API_BASE_URL}/orders/${orderId}/invoice-pdf?token=${token}`;
+      const supported = await Linking.canOpenURL(uri);
       
-      const { uri: downloadedUri, status } = await FileSystem.downloadAsync(uri, fileUri, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      
-      if (status !== 200) {
-        throw new Error('Failed to download from server');
-      }
-      
-      const isAvailable = await Sharing.isAvailableAsync();
-      if (isAvailable) {
-        await Sharing.shareAsync(downloadedUri);
+      if (supported) {
+        await Linking.openURL(uri);
       } else {
-        Alert.alert("Downloaded", "Invoice saved to device.");
+        Alert.alert("Error", "Don't know how to open URI: " + uri);
       }
     } catch (err) {
       console.error(err);
