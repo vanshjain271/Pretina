@@ -1,33 +1,57 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { colors } from '../../theme/colors';
+import { useGetMyOrdersQuery } from '../../store/apiSlice';
+import auth from '@react-native-firebase/auth';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import { API_BASE_URL } from '../../config';
 
 export default function OrdersScreen({ navigation }) {
-  const dummyOrders = [
-    {
-      id: 'ORD-12345',
-      date: '10 Oct 2026',
-      status: 'Processing',
-      total: 6000,
-      paymentMethod: 'UPI QR (Advance)',
-      items: [
-        { name: 'Premium Lipstick', variant: 'Ruby Red', qty: 10 },
-      ]
-    },
-    {
-      id: 'ORD-12346',
-      date: '05 Oct 2026',
-      status: 'Delivered',
-      total: 1200,
-      paymentMethod: 'Razorpay',
-      items: [
-        { name: 'Foundation Cream', variant: 'Beige', qty: 5 },
-      ]
-    }
-  ];
+  const { data, isLoading, error, refetch, isFetching } = useGetMyOrdersQuery();
+  const orders = data?.data || [];
 
-  const handleDownloadInvoice = (orderId) => {
-    Alert.alert('Download', `Downloading Invoice for ${orderId}...`);
+  const [downloadingInvoice, setDownloadingInvoice] = React.useState(null);
+
+  const handleDownloadInvoice = async (orderId) => {
+    setDownloadingInvoice(orderId);
+    try {
+      const user = auth().currentUser;
+      if (!user) {
+        Alert.alert("Error", "You must be logged in.");
+        return;
+      }
+      const token = await user.getIdToken();
+      
+      const uri = `${API_BASE_URL}/orders/${orderId}/invoice-pdf`;
+      const fileUri = FileSystem.documentDirectory + `Pretina_Invoice_${orderId.slice(-6)}.pdf`;
+      
+      const { uri: downloadedUri, status } = await FileSystem.downloadAsync(uri, fileUri, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      if (status !== 200) {
+        throw new Error('Failed to download from server');
+      }
+      
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (isAvailable) {
+        await Sharing.shareAsync(downloadedUri);
+      } else {
+        Alert.alert("Downloaded", "Invoice saved to device.");
+      }
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "Failed to download invoice. Please try again.");
+    } finally {
+      setDownloadingInvoice(null);
+    }
+  };
+
+  const onRefresh = () => {
+    refetch();
   };
 
   return (
@@ -40,43 +64,75 @@ export default function OrdersScreen({ navigation }) {
         <View style={{ width: 50 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {dummyOrders.map(order => (
-          <View key={order.id} style={styles.orderCard}>
-            <View style={styles.orderHeader}>
-              <Text style={styles.orderId}>{order.id}</Text>
-              <Text style={styles.orderDate}>{order.date}</Text>
-            </View>
-            
-            <View style={styles.statusRow}>
-              <Text style={styles.statusBadge}>{order.status}</Text>
-              <Text style={styles.paymentMethod}>{order.paymentMethod}</Text>
-            </View>
-
-            <View style={styles.divider} />
-
-            {order.items.map((item, index) => (
-              <View key={index} style={styles.itemRow}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemVariant}>Variant: {item.variant}</Text>
-                <Text style={styles.itemQty}>Qty: {item.qty}</Text>
+      {isLoading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : error ? (
+        <View style={styles.center}>
+          <Text style={{color: colors.error}}>Failed to load orders.</Text>
+        </View>
+      ) : orders.length === 0 ? (
+        <View style={styles.center}>
+          <Text style={styles.emptyText}>You have no past orders.</Text>
+        </View>
+      ) : (
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isFetching && !isLoading}
+              onRefresh={onRefresh}
+              colors={[colors.primary]}
+            />
+          }
+        >
+          {orders.map(order => (
+            <TouchableOpacity 
+              key={order._id} 
+              style={styles.orderCard}
+              onPress={() => navigation.navigate('OrderDetail', { orderId: order._id })}
+            >
+              <View style={styles.orderHeader}>
+                <Text style={styles.orderId}>#{order.orderNumber || order._id.slice(-6).toUpperCase()}</Text>
+                <Text style={styles.orderDate}>{new Date(order.createdAt).toLocaleDateString()}</Text>
               </View>
-            ))}
+            
+              <View style={styles.statusRow}>
+                <Text style={styles.statusBadge}>{order.status || order.orderStatus || 'pending'}</Text>
+                <Text style={styles.paymentMethod}>{order.paymentMethod.toUpperCase()}</Text>
+              </View>
 
-            <View style={styles.divider} />
+              <View style={styles.divider} />
 
-            <View style={styles.orderFooter}>
-              <Text style={styles.orderTotal}>Total: ₹{order.total}</Text>
-              <TouchableOpacity 
-                style={styles.invoiceButton}
-                onPress={() => handleDownloadInvoice(order.id)}
-              >
-                <Text style={styles.invoiceText}>Download Invoice 📥</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
-      </ScrollView>
+              {order.items.map((item, index) => (
+                <View key={index} style={styles.itemRow}>
+                  <Text style={styles.itemName}>{item.product?.name || item.name || 'Unknown Product'}</Text>
+                  {item.variantName ? <Text style={styles.itemVariant}>Variant: {item.variantName}</Text> : null}
+                  <Text style={styles.itemQty}>Qty: {item.quantity}</Text>
+                </View>
+              ))}
+
+              <View style={styles.divider} />
+
+              <View style={styles.orderFooter}>
+                <Text style={styles.orderTotal}>Total: ₹{order.total || order.totalAmount}</Text>
+                <TouchableOpacity 
+                  style={styles.invoiceButton} 
+                  onPress={() => handleDownloadInvoice(order._id)}
+                  disabled={downloadingInvoice === order._id}
+                >
+                  {downloadingInvoice === order._id ? (
+                     <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                     <Text style={styles.invoiceText}>Download Invoice 📥</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -104,6 +160,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: colors.textPrimaryLight,
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: colors.gray500,
+    fontSize: 16,
   },
   scrollContent: {
     padding: 16,

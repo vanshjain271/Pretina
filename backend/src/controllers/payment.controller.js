@@ -26,8 +26,20 @@ exports.createRazorpayOrder = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized.' });
     }
 
+    let amountToPay = Math.round(order.total * 100);
+    
+    if (order.paymentMethod === 'partial_razorpay') {
+      let advanceAmount = 0;
+      if (settings.codAdvanceType === 'percentage') {
+        advanceAmount = (order.total * (settings.codAdvancePercentage || 10)) / 100;
+      } else {
+        advanceAmount = settings.codAdvanceFixedAmount || 0;
+      }
+      amountToPay = Math.round(advanceAmount * 100);
+    }
+
     const razorpayOrder = await getRazorpayInstance().orders.create({
-      amount: Math.round(order.total * 100), // Razorpay expects paise
+      amount: amountToPay, // Razorpay expects paise
       currency: 'INR',
       receipt: order.orderNumber,
     });
@@ -55,6 +67,8 @@ exports.createRazorpayOrder = async (req, res, next) => {
 exports.verifyRazorpayPayment = async (req, res, next) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, orderId } = req.body;
+    let order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found.' });
 
     // Verify signature
     const body = razorpay_order_id + '|' + razorpay_payment_id;
@@ -68,14 +82,32 @@ exports.verifyRazorpayPayment = async (req, res, next) => {
     }
 
     // Update order status
-    const order = await Order.findByIdAndUpdate(
+    const isPartial = order.paymentMethod === 'partial_razorpay';
+    const newPaymentStatus = isPartial ? 'advance_paid' : 'paid';
+    
+    // If it was partial, let's also update the tokenReceived amount so admin knows how much was paid
+    let updateFields = {
+      paymentStatus: newPaymentStatus,
+      status: 'confirmed',
+      razorpayPaymentId: razorpay_payment_id,
+      $push: { statusHistory: { status: 'confirmed', note: `Payment received via Razorpay (${isPartial ? 'Advance' : 'Full'}).` } },
+    };
+    
+    if (isPartial) {
+      // Calculate what they paid based on Razorpay verification (we could also check razorpay order amount but we know it's the advance)
+      let advanceAmount = 0;
+      const settings = await Settings.findById('global');
+      if (settings.codAdvanceType === 'percentage') {
+        advanceAmount = (order.total * (settings.codAdvancePercentage || 10)) / 100;
+      } else {
+        advanceAmount = settings.codAdvanceFixedAmount || 0;
+      }
+      updateFields.tokenReceived = advanceAmount;
+    }
+
+    order = await Order.findByIdAndUpdate(
       orderId,
-      {
-        paymentStatus: 'paid',
-        status: 'confirmed',
-        razorpayPaymentId: razorpay_payment_id,
-        $push: { statusHistory: { status: 'confirmed', note: 'Payment received via Razorpay.' } },
-      },
+      updateFields,
       { new: true }
     );
 

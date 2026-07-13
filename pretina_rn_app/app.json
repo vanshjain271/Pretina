@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "pretina_rn_app",
+    "name": "Pretina",
     "slug": "pretina_rn_app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,7 +9,7 @@
     "splash": {
       "image": "./assets/splash-logo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FF6600"
+      "backgroundColor": "#FFF8F2"
     },
     "ios": {
       "supportsTablet": true,
@@ -17,13 +17,7 @@
     },
     "android": {
       "package": "com.pretina.ajcompany",
-      "googleServicesFile": "./google-services.json",
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -40,7 +34,9 @@
         }
       ],
       "@react-native-firebase/messaging",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      "expo-image",
+      "expo-sharing"
     ]
   }
 }

@@ -93,4 +93,42 @@ router.delete('/', protect, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// PUT sync cart
+router.put('/sync', protect, async (req, res, next) => {
+  try {
+    const { items = [] } = req.body;
+    const cart = await getOrCreateCart(req.user._id);
+    
+    const validatedItems = [];
+    for (const item of items) {
+      const product = await Product.findById(item.product);
+      if (!product || !product.isActive) continue;
+
+      let price = product.salePrice;
+      let variantName = item.variantName || '';
+      if (item.variant) {
+        const variant = product.variants.id(item.variant);
+        if (variant) {
+          price = variant.price || variant.salePrice || product.salePrice;
+          variantName = variant.name || variant.color || variantName;
+        }
+      }
+
+      validatedItems.push({
+        product: product._id,
+        quantity: item.quantity,
+        price,
+        variantId: item.variant || null,
+        variantName
+      });
+    }
+
+    cart.items = validatedItems;
+    await cart.save();
+    
+    const populated = await getOrCreateCart(req.user._id);
+    res.json({ success: true, data: populated });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

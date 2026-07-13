@@ -521,6 +521,11 @@ export default function Orders() {
                           <LocalShippingIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
+                      <Tooltip title="Delete Order">
+                        <IconButton size="small" color="error" onClick={() => handleDeleteOrder(order)}>
+                          <DeleteOutlineIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Edit Order">
                         <IconButton size="small" color="secondary" onClick={() => openEditDialog(order)}>
                           <EditIcon fontSize="small" />

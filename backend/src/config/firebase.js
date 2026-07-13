@@ -35,7 +35,7 @@ try {
     } else {
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
-        projectId: process.env.FIREBASE_PROJECT_ID || 'pretina-656c3',
+        projectId: process.env.FIREBASE_PROJECT_ID || 'pretina-b2b',
       });
       firebaseInitialized = true;
       console.log('✅ Firebase Admin SDK initialized');

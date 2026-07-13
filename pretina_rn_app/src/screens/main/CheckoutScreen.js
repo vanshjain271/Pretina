@@ -1,16 +1,54 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Alert, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Alert, Image, ActivityIndicator, Modal } from 'react-native';
 import { colors } from '../../theme/colors';
+import { useSelector, useDispatch } from 'react-redux';
+import { selectCartTotalPrice, selectCartItems, clearCart } from '../../store/cartSlice';
+import { 
+  useGetSettingsQuery, 
+  useGetMyProfileQuery,
+  useSyncCartMutation, 
+  useCreateOrderMutation, 
+  useCreateRazorpayOrderMutation, 
+  useVerifyRazorpayPaymentMutation,
+  useClearCartAPIMutation,
+  useAddToCartAPIMutation
+} from '../../store/apiSlice';
+import RazorpayCheckout from 'react-native-razorpay';
 
 export default function CheckoutScreen({ navigation }) {
-  const [selectedPayment, setSelectedPayment] = useState('razorpay'); // razorpay, qr, cod
+  const dispatch = useDispatch();
+  const [selectedPayment, setSelectedPayment] = useState('razorpay'); // razorpay, qr, cod, partial
   const [transactionId, setTransactionId] = useState('');
   const [selectedAddress, setSelectedAddress] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   
-  // Dummy values for now
-  const checkoutMessage = "Notice: Advance payment of ₹1000 is required for COD orders outside Delhi.";
-  const totalAmount = 6000;
-  const qrImageUrl = 'https://dummyimage.com/200x200/000/fff&text=UPI+QR';
+  const totalAmount = useSelector(selectCartTotalPrice);
+  const cartItems = useSelector(selectCartItems);
+
+  const { data: settingsData } = useGetSettingsQuery();
+  const [syncCart] = useSyncCartMutation();
+  const [createOrder] = useCreateOrderMutation();
+  const [createRazorpayOrder] = useCreateRazorpayOrderMutation();
+  const [verifyRazorpayPayment] = useVerifyRazorpayPaymentMutation();
+  const [clearCartAPI] = useClearCartAPIMutation();
+  const [addToCartAPI] = useAddToCartAPIMutation();
+
+  const { data: profileData } = useGetMyProfileQuery();
+
+  useEffect(() => {
+    if (!selectedAddress && profileData?.data?.addresses?.length > 0) {
+      const addresses = profileData.data.addresses;
+      const defaultAddr = addresses.find(a => a.isDefault) || addresses[0];
+      setSelectedAddress(defaultAddr);
+    }
+  }, [profileData, selectedAddress]);
+
+  const settings = settingsData?.data || {};
+  const checkoutMessage = settings.orderNotes || "";
+  const qrImageUrl = settings.qrImageUrl || 'https://dummyimage.com/200x200/000/fff&text=UPI+QR';
+  const razorpayKey = settings.razorpayKeyId || '';
+
+  const [isQrModalVisible, setIsQrModalVisible] = useState(false);
 
   const handleSelectAddress = () => {
     navigation.navigate('AddressSelection', {
@@ -18,27 +56,100 @@ export default function CheckoutScreen({ navigation }) {
     });
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (!selectedAddress) {
       Alert.alert('Error', 'Please select a delivery address first.');
       return;
     }
-    if (selectedPayment === 'qr') {
-      if (!transactionId) {
-        Alert.alert('Error', 'Please enter your UPI Transaction ID');
-        return;
+    if (cartItems.length === 0) {
+      Alert.alert('Error', 'Your cart is empty.');
+      return;
+    }
+
+    // if (selectedPayment === 'partial' && !isQrModalVisible) {
+    //   setIsQrModalVisible(true);
+    //   return;
+    // }
+
+    setIsProcessing(true);
+    try {
+      // 1. Sync cart using individual endpoint calls
+      try {
+        await clearCartAPI().unwrap();
+        for (const item of cartItems) {
+          await addToCartAPI({
+            productId: item.product._id,
+            variantId: item.variant ? item.variant._id : null,
+            variantName: item.variant ? item.variant.name : '',
+            quantity: item.quantity,
+          }).unwrap();
+        }
+      } catch (err) {
+        console.warn('Cart sync failed, proceeding anyway:', err);
       }
-      // Submit order with QR details
-      Alert.alert('Success', 'Order placed! Waiting for admin payment confirmation.');
-      navigation.navigate('Main');
-    } else if (selectedPayment === 'razorpay') {
-      // Trigger Razorpay SDK
-      Alert.alert('Info', 'Launching Razorpay...');
-      // razorpay logic here
-    } else {
-      // COD
-      Alert.alert('Success', 'Order placed successfully with COD!');
-      navigation.navigate('Main');
+
+      // 2. Create Order
+      const orderPayload = {
+        shippingAddressId: selectedAddress._id,
+        paymentMethod: selectedPayment === 'razorpay' ? 'razorpay' : (selectedPayment === 'partial' ? 'partial_razorpay' : 'cod'),
+      };
+
+      const orderRes = await createOrder(orderPayload).unwrap();
+      if (!orderRes.success) throw new Error(orderRes.message || 'Order creation failed');
+
+      const orderData = orderRes.data;
+
+      // 3. Process Razorpay if selected (Full or Partial)
+      if (selectedPayment === 'razorpay' || selectedPayment === 'partial') {
+        const rpOrderRes = await createRazorpayOrder({ orderId: orderData._id, isPartial: selectedPayment === 'partial' }).unwrap();
+        if (!rpOrderRes.success) throw new Error('Could not initialize Razorpay');
+
+        const options = {
+          description: 'Payment for your order',
+          image: 'https://your-logo-url.png', // Optional
+          currency: rpOrderRes.data.currency,
+          key: razorpayKey,
+          amount: rpOrderRes.data.amount,
+          name: 'Pretina',
+          order_id: rpOrderRes.data.id,
+          theme: { color: colors.primary }
+        };
+
+        try {
+          const data = await RazorpayCheckout.open(options);
+          
+          // Verify
+          const verifyRes = await verifyRazorpayPayment({
+            razorpay_order_id: data.razorpay_order_id,
+            razorpay_payment_id: data.razorpay_payment_id,
+            razorpay_signature: data.razorpay_signature
+          }).unwrap();
+
+          if (verifyRes.success) {
+            dispatch(clearCart());
+            Alert.alert('Success', 'Order placed successfully!');
+            navigation.navigate('Main');
+          } else {
+            throw new Error('Payment verification failed');
+          }
+        } catch (error) {
+          Alert.alert('Payment Failed', `Payment cancelled or failed. Error: ${error.code} | ${error.description}`);
+          // Note: Order is created but unpaid. User can pay from OrdersScreen later.
+          navigation.navigate('Orders'); 
+        }
+      } else {
+        // COD
+        dispatch(clearCart());
+        Alert.alert('Success', 'Order placed successfully!');
+        navigation.navigate('Main');
+      }
+
+    } catch (error) {
+      console.log('Order error:', error);
+      Alert.alert('Error', error?.data?.message || error.message || 'Something went wrong while placing order');
+    } finally {
+      setIsProcessing(false);
+      setIsQrModalVisible(false);
     }
   };
 
@@ -75,6 +186,31 @@ export default function CheckoutScreen({ navigation }) {
           )}
         </TouchableOpacity>
 
+        <Text style={styles.sectionTitle}>Items in Cart</Text>
+        <View style={styles.itemsBox}>
+          {cartItems.map((item, index) => {
+            const itemKey = item.variant ? `${item.product._id}_${item.variant._id}` : item.product._id;
+            const itemPrice = item.variant ? (item.variant.salePrice || item.variant.price || item.product.salePrice) : item.product.salePrice;
+            
+            return (
+              <View key={itemKey} style={styles.cartItemRow}>
+                <Image 
+                  source={{ uri: item.product.images?.[0] }} 
+                  style={styles.cartItemImage} 
+                />
+                <View style={styles.cartItemDetails}>
+                  <Text style={styles.cartItemName} numberOfLines={2}>{item.product.name}</Text>
+                  {item.variant && (
+                    <Text style={styles.cartItemVariant}>Variant: {item.variant.name}</Text>
+                  )}
+                  <Text style={styles.cartItemQty}>Qty: {item.quantity}</Text>
+                </View>
+                <Text style={styles.cartItemPrice}>₹{itemPrice * item.quantity}</Text>
+              </View>
+            );
+          })}
+        </View>
+
         <Text style={styles.sectionTitle}>Order Summary</Text>
         <View style={styles.summaryBox}>
           <View style={styles.summaryRow}>
@@ -89,55 +225,46 @@ export default function CheckoutScreen({ navigation }) {
 
         <Text style={styles.sectionTitle}>Select Payment Method</Text>
 
-        <TouchableOpacity 
-          style={[styles.paymentOption, selectedPayment === 'razorpay' && styles.paymentOptionSelected]}
-          onPress={() => setSelectedPayment('razorpay')}
-        >
-          <Text style={styles.paymentText}>Pay Online (Razorpay)</Text>
-          <Text style={styles.paymentSubtext}>Instant confirmation</Text>
-        </TouchableOpacity>
+        {settings.paymentRazorpayEnabled && (
+          <TouchableOpacity 
+            style={[styles.paymentOption, selectedPayment === 'razorpay' && styles.paymentOptionSelected]}
+            onPress={() => setSelectedPayment('razorpay')}
+          >
+            <Text style={styles.paymentText}>Prepaid (Full Payment)</Text>
+            <Text style={styles.paymentSubtext}>Instant confirmation via Razorpay</Text>
+          </TouchableOpacity>
+        )}
 
-        <TouchableOpacity 
-          style={[styles.paymentOption, selectedPayment === 'qr' && styles.paymentOptionSelected]}
-          onPress={() => setSelectedPayment('qr')}
-        >
-          <Text style={styles.paymentText}>Pay via UPI QR (Manual)</Text>
-          <Text style={styles.paymentSubtext}>Upload screenshot</Text>
-        </TouchableOpacity>
+        {settings.advancePartialPayment && (
+          <TouchableOpacity 
+            style={[styles.paymentOption, selectedPayment === 'partial' && styles.paymentOptionSelected]}
+            onPress={() => setSelectedPayment('partial')}
+          >
+            <Text style={styles.paymentText}>COD (with Partial Payment)</Text>
+            <Text style={styles.paymentSubtext}>Pay a small booking amount now, rest on delivery</Text>
+          </TouchableOpacity>
+        )}
 
-        <TouchableOpacity 
-          style={[styles.paymentOption, selectedPayment === 'cod' && styles.paymentOptionSelected]}
-          onPress={() => setSelectedPayment('cod')}
-        >
-          <Text style={styles.paymentText}>Cash on Delivery (COD)</Text>
-        </TouchableOpacity>
-
-        {selectedPayment === 'qr' && (
-          <View style={styles.qrSection}>
-            <Text style={styles.qrTitle}>Scan to Pay</Text>
-            <Image source={{ uri: qrImageUrl }} style={styles.qrImage} />
-            <Text style={styles.qrSubtitle}>Pay ₹{totalAmount} via any UPI app</Text>
-            
-            <TextInput
-              style={styles.input}
-              placeholder="Enter UPI Transaction ID (12 digits)"
-              value={transactionId}
-              onChangeText={setTransactionId}
-              keyboardType="number-pad"
-            />
-            
-            <TouchableOpacity style={styles.uploadButton}>
-              <Text style={styles.uploadText}>Upload Payment Screenshot</Text>
-            </TouchableOpacity>
-          </View>
+        {settings.paymentCodEnabled && (
+          <TouchableOpacity 
+            style={[styles.paymentOption, selectedPayment === 'cod' && styles.paymentOptionSelected]}
+            onPress={() => setSelectedPayment('cod')}
+          >
+            <Text style={styles.paymentText}>Cash on Delivery (COD)</Text>
+            <Text style={styles.paymentSubtext}>Pay in full when your order arrives</Text>
+          </TouchableOpacity>
         )}
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.placeOrderButton} onPress={handlePlaceOrder}>
-          <Text style={styles.placeOrderText}>
-            {selectedPayment === 'qr' ? 'Submit Payment Details' : 'Place Order'}
-          </Text>
+        <TouchableOpacity style={styles.placeOrderButton} onPress={handlePlaceOrder} disabled={isProcessing}>
+          {isProcessing ? (
+            <ActivityIndicator color={colors.white} />
+          ) : (
+            <Text style={styles.placeOrderText}>
+              Place Order
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -195,6 +322,52 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     borderWidth: 1,
     borderColor: colors.gray200,
+  },
+  itemsBox: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+  },
+  cartItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray100,
+  },
+  cartItemImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 6,
+    backgroundColor: colors.gray200,
+  },
+  cartItemDetails: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  cartItemName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimaryLight,
+  },
+  cartItemVariant: {
+    fontSize: 12,
+    color: colors.textSecondaryLight,
+    marginTop: 2,
+  },
+  cartItemQty: {
+    fontSize: 12,
+    color: colors.gray600,
+    marginTop: 2,
+  },
+  cartItemPrice: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: colors.primary,
+    marginLeft: 8,
   },
   addressBox: {
     backgroundColor: '#fff',
@@ -309,6 +482,67 @@ const styles = StyleSheet.create({
   },
   uploadText: {
     color: colors.primary,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    width: '100%',
+    borderRadius: 12,
+    padding: 24,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: colors.textPrimaryLight,
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: colors.textSecondaryLight,
+    marginBottom: 8,
+    alignSelf: 'flex-start',
+    marginTop: 16,
+  },
+  qrImageLarge: {
+    width: 250,
+    height: 250,
+    marginVertical: 16,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 16,
+  },
+  modalCancelBtn: {
+    padding: 12,
+    flex: 1,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: colors.gray600,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalSaveBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    flex: 2,
+    alignItems: 'center',
+  },
+  modalSaveText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
   },
   bottomBar: {

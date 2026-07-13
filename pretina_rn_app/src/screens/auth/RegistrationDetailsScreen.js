@@ -2,19 +2,13 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Alert, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
+import { API_BASE_URL } from '../../config';
 
-// Example: import API function to update profile
-// We will define this API in apiSlice or do a fetch call.
-// For now we'll do a simple fetch directly or use RTK Query if defined.
-import { apiSlice } from '../../store/apiSlice';
-import { useDispatch } from 'react-redux';
-
-export default function RegistrationDetailsScreen({ navigation, route }) {
+export default function RegistrationDetailsScreen({ navigation, route, token, onComplete }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [pincode, setPincode] = useState('');
   const [loading, setLoading] = useState(false);
-  const dispatch = useDispatch();
 
   const handleCompleteRegistration = async () => {
     if (!name.trim()) return Alert.alert('Error', 'Please enter your full name');
@@ -22,23 +16,31 @@ export default function RegistrationDetailsScreen({ navigation, route }) {
     
     setLoading(true);
     try {
-      // Use the API slice to dispatch a manual mutation or define it
-      const response = await fetch('http://10.0.2.2:5001/api/v1/users/me', {
+      const response = await fetch(`${API_BASE_URL}/users/me`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          // Note: In a real app we'd get the token from async storage or auth slice
-          // But since they just logged in, they are authenticated via cookies or we need to pass token.
-          // Wait, Pretina backend uses JWT. Where is it stored? Let's check how Auth sets it.
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ name, email, pincode }),
       });
-      // We will refine the network call once we see how Auth handles tokens.
       
-      // For now, assume success and navigate to Main
-      navigation.replace('Main');
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Failed to update profile');
+      }
+      
+      // Call the onComplete prop passed from AppNavigator to switch the authState to 'authenticated'
+      if (onComplete) {
+        onComplete();
+      } else {
+        // Fallback just in case
+        navigation.replace('Main');
+      }
     } catch (err) {
-      Alert.alert('Error', 'Failed to update details.');
+      console.error(err);
+      Alert.alert('Registration Failed', err.message || 'Something went wrong while updating details.');
     } finally {
       setLoading(false);
     }
@@ -47,7 +49,7 @@ export default function RegistrationDetailsScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
             <Text style={styles.title}>Complete Your Profile</Text>
             <Text style={styles.subtitle}>Just a few details to get you started!</Text>

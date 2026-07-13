@@ -3,50 +3,51 @@ import { View, Animated, StyleSheet } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 
 // Prevent native splash from auto-hiding
-SplashScreen.preventAutoHideAsync().catch(() => {
-  /* reloading the app might trigger some race conditions, ignore them */
-});
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function AnimatedSplashScreen({ children, isAppReady }) {
   const [isSplashAnimationComplete, setAnimationComplete] = useState(false);
   
   // Animation values
   const containerOpacity = useRef(new Animated.Value(1)).current;
-  const imageOpacity = useRef(new Animated.Value(1)).current;
-  const backgroundColorInterpolation = useRef(new Animated.Value(0)).current;
+  const imageOpacity = useRef(new Animated.Value(0)).current;
+  const imageScale = useRef(new Animated.Value(0.92)).current;
+  const imageTranslateY = useRef(new Animated.Value(8)).current;
 
   useEffect(() => {
     if (isAppReady) {
-      // Hide the native splash screen immediately, now that our React Native view is rendered
+      // Hide the native splash screen immediately, since we have our custom overlay
       SplashScreen.hideAsync().catch(() => {});
       
-      // Start the transition animation
-      Animated.sequence([
-        // 1. Keep the screen orange and full logo for a tiny bit (smooth handoff)
-        Animated.delay(500),
-        
-        // 2. Fade out the logo and transition background to dark
-        Animated.parallel([
-          Animated.timing(imageOpacity, {
-            toValue: 0,
-            duration: 800, // fade out logo
-            useNativeDriver: true,
-          }),
-          Animated.timing(backgroundColorInterpolation, {
-            toValue: 1,
-            duration: 1000, // transition to dark
-            useNativeDriver: false, // Colors don't support native driver
-          })
-        ]),
-        
-        // 3. Fade out the entire container to reveal the app underneath
-        Animated.timing(containerOpacity, {
-          toValue: 0,
-          duration: 500,
+      // 1. Logo fades in, scales slightly, and translates up
+      Animated.parallel([
+        Animated.timing(imageOpacity, {
+          toValue: 1,
+          duration: 1000,
           useNativeDriver: true,
-        })
+        }),
+        Animated.timing(imageScale, {
+          toValue: 1,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(imageTranslateY, {
+          toValue: 0,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
       ]).start(() => {
-        setAnimationComplete(true);
+        // 2. Hold for 300ms, then fade out the whole overlay
+        Animated.sequence([
+          Animated.delay(300),
+          Animated.timing(containerOpacity, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+          })
+        ]).start(() => {
+          setAnimationComplete(true);
+        });
       });
     }
   }, [isAppReady]);
@@ -54,12 +55,6 @@ export default function AnimatedSplashScreen({ children, isAppReady }) {
   if (isSplashAnimationComplete) {
     return children;
   }
-
-  // Interpolate the background color from Pretina Orange to Light Mode background
-  const backgroundColor = backgroundColorInterpolation.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['#FF6600', '#F9FAFB'], // From Pretina Orange to Light
-  });
 
   return (
     <View style={styles.container}>
@@ -70,12 +65,18 @@ export default function AnimatedSplashScreen({ children, isAppReady }) {
       <Animated.View 
         style={[
           styles.splashOverlay,
-          { opacity: containerOpacity, backgroundColor }
+          { opacity: containerOpacity }
         ]}
       >
         <Animated.Image
-          source={require('../../assets/splash-logo.png')}
-          style={[styles.image, { opacity: imageOpacity }]}
+          source={require('../../assets/P.png')} // Original Pretina Logo without backgrounds
+          style={[styles.image, { 
+            opacity: imageOpacity,
+            transform: [
+              { scale: imageScale },
+              { translateY: imageTranslateY }
+            ]
+          }]}
         />
       </Animated.View>
     </View>
@@ -88,13 +89,14 @@ const styles = StyleSheet.create({
   },
   splashOverlay: {
     ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#FFF8F2', // Premium cream color
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 9999,
   },
   image: {
-    width: 250,
-    height: 250,
+    width: 160,
+    height: 160,
     resizeMode: 'contain',
   },
 });

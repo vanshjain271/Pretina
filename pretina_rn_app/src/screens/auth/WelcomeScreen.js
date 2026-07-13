@@ -5,61 +5,91 @@ import { colors } from '../../theme/colors';
 const { width, height } = Dimensions.get('window');
 
 export default function WelcomeScreen({ navigation }) {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-  const logoScale = useRef(new Animated.Value(0.5)).current;
+  // Logo Animations (Phase 1)
+  const logoOpacityAnim = useRef(new Animated.Value(0)).current;
+  const logoScaleAnim = useRef(new Animated.Value(0.90)).current;
+  const logoTranslateYAnim = useRef(new Animated.Value(10)).current;
+  
+  // Auth UI Animations (Phase 2)
+  const authUiOpacityAnim = useRef(new Animated.Value(0)).current;
+  const authUiTranslateYAnim = useRef(new Animated.Value(20)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-      Animated.spring(logoScale, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
+    Animated.sequence([
+      // Phase 1: Logo animation (fade in, scale up, slide up)
+      Animated.parallel([
+        Animated.timing(logoOpacityAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoScaleAnim, {
+          toValue: 1,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoTranslateYAnim, {
+          toValue: 0,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+      ]),
+      // Hold for 300ms
+      Animated.delay(300),
+      // Phase 2: Auth UI fades and slides in smoothly
+      Animated.parallel([
+        Animated.timing(authUiOpacityAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(authUiTranslateYAnim, {
+          toValue: 0,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ]),
     ]).start();
   }, []);
 
   return (
     <View style={styles.container}>
-      {/* Background Graphic / Curve */}
-      <View style={styles.backgroundGraphic} />
-
       <View style={styles.content}>
-        <Animated.View style={[styles.logoContainer, { transform: [{ scale: logoScale }], opacity: fadeAnim }]}>
-          <Image source={require('../../../assets/P.png')} style={styles.logo} />
+        <Animated.View style={[styles.logoContainer, { 
+          opacity: logoOpacityAnim,
+          transform: [
+            { scale: logoScaleAnim },
+            { translateY: logoTranslateYAnim }
+          ]
+        }]}>
+          <Image source={require('../../../assets/logo.png')} style={styles.logo} />
         </Animated.View>
 
-        <Animated.View style={[styles.textContainer, { transform: [{ translateY: slideAnim }], opacity: fadeAnim }]}>
-          <Text style={styles.title}>Welcome to Pretina</Text>
-          <Text style={styles.subtitle}>Discover premium products, fast delivery, and unbeatable prices.</Text>
+        <Animated.View style={[styles.textContainer, { 
+          opacity: authUiOpacityAnim,
+          transform: [{ translateY: authUiTranslateYAnim }]
+        }]}>
+          <Text style={styles.title}>PRETINA</Text>
+          <Text style={styles.subtitle}>Premium shopping for businesses.{'\n'}Fast delivery. Trusted suppliers.</Text>
         </Animated.View>
       </View>
 
-      <Animated.View style={[styles.footer, { transform: [{ translateY: slideAnim }], opacity: fadeAnim }]}>
+      <Animated.View style={[styles.footer, { 
+        opacity: authUiOpacityAnim,
+        transform: [{ translateY: authUiTranslateYAnim }]
+      }]}>
         <TouchableOpacity
           style={styles.primaryButton}
           onPress={() => navigation.navigate('PhoneLogin', { mode: 'signin' })}
         >
-          <Text style={styles.primaryButtonText}>Already a customer? Sign In</Text>
+          <Text style={styles.primaryButtonText}>Already a Customer? Sign In</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.secondaryButton}
           onPress={() => navigation.navigate('PhoneLogin', { mode: 'signup' })}
         >
-          <Text style={styles.secondaryButtonText}>New Customer? Sign Up</Text>
+          <Text style={styles.secondaryButtonText}>Create New Account</Text>
         </TouchableOpacity>
       </Animated.View>
     </View>
@@ -69,95 +99,82 @@ export default function WelcomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFF8F2', // Premium cream color
     justifyContent: 'space-between',
-  },
-  backgroundGraphic: {
-    position: 'absolute',
-    top: -height * 0.1,
-    left: -width * 0.1,
-    width: width * 1.2,
-    height: height * 0.4,
-    backgroundColor: colors.primary,
-    borderBottomLeftRadius: width * 0.6,
-    borderBottomRightRadius: width * 0.6,
-    opacity: 0.1,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 32,
   },
   logoContainer: {
-    width: 120,
-    height: 120,
-    backgroundColor: '#fff',
-    borderRadius: 30,
-    justifyContent: 'center',
+    marginBottom: 24,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 10,
-    marginBottom: 40,
+    justifyContent: 'center',
   },
   logo: {
-    width: 80,
-    height: 80,
+    width: 200, // Significantly larger logo
+    height: 200,
     resizeMode: 'contain',
   },
   textContainer: {
     alignItems: 'center',
   },
   title: {
-    fontSize: 28,
+    fontSize: 38,
     fontWeight: '800',
-    color: colors.textPrimaryLight,
-    marginBottom: 12,
+    color: '#1A1A1A',
+    marginBottom: 16,
     textAlign: 'center',
+    letterSpacing: 1.5, // Added letter spacing for a more premium look on the brand name
   },
   subtitle: {
     fontSize: 16,
-    color: colors.textSecondaryLight,
+    color: '#666666',
     textAlign: 'center',
     lineHeight: 24,
+    fontWeight: '400',
   },
   footer: {
-    padding: 24,
-    paddingBottom: 40,
+    paddingHorizontal: 24,
+    paddingBottom: 48,
   },
   primaryButton: {
     backgroundColor: colors.primary,
-    height: 56,
+    height: 60,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },
   primaryButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   secondaryButton: {
     backgroundColor: '#fff',
-    height: 56,
+    height: 60,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: '#E5E5E5',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   secondaryButtonText: {
-    color: colors.primary,
+    color: '#1A1A1A',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
   },
 });

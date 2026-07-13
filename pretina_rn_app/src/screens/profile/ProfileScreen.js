@@ -1,9 +1,26 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Alert, Modal, TextInput, ActivityIndicator } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import { colors } from '../../theme/colors';
+import { useGetMyProfileQuery, useUpdateProfileMutation } from '../../store/apiSlice';
 
 export default function ProfileScreen({ navigation }) {
+  const { data: profileData, isLoading: profileLoading } = useGetMyProfileQuery();
+  const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation();
+  
+  const userProfile = profileData?.data || {};
+
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+
+  useEffect(() => {
+    if (userProfile) {
+      setEditName(userProfile.name || '');
+      setEditPhone(userProfile.phone || '');
+    }
+  }, [userProfile]);
+
   const handleLogout = async () => {
     try {
       await auth().signOut();
@@ -30,13 +47,13 @@ export default function ProfileScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>U</Text>
+            <Text style={styles.avatarText}>{userProfile.name ? userProfile.name[0].toUpperCase() : 'U'}</Text>
           </View>
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>Hello, User</Text>
-            <Text style={styles.userPhone}>+91 9999999999</Text>
+            <Text style={styles.userName}>{userProfile.name || 'Hello, User'}</Text>
+            <Text style={styles.userPhone}>{userProfile.phone || userProfile.email || 'No contact info'}</Text>
           </View>
-          <TouchableOpacity style={styles.editButton}>
+          <TouchableOpacity style={styles.editButton} onPress={() => setIsEditModalVisible(true)}>
             <Text style={styles.editButtonText}>Edit</Text>
           </TouchableOpacity>
         </View>
@@ -54,6 +71,61 @@ export default function ProfileScreen({ navigation }) {
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Edit Profile Modal */}
+      <Modal visible={isEditModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Edit Profile</Text>
+            
+            <Text style={styles.inputLabel}>Name</Text>
+            <TextInput
+              style={styles.input}
+              value={editName}
+              onChangeText={setEditName}
+              placeholder="Enter your name"
+            />
+            
+            <Text style={styles.inputLabel}>Phone Number</Text>
+            <TextInput
+              style={styles.input}
+              value={editPhone}
+              onChangeText={setEditPhone}
+              placeholder="Enter your phone number"
+              keyboardType="phone-pad"
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={styles.modalCancelBtn} 
+                onPress={() => setIsEditModalVisible(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.modalSaveBtn} 
+                onPress={async () => {
+                  try {
+                    await updateProfile({ name: editName, phone: editPhone }).unwrap();
+                    Alert.alert("Success", "Profile updated successfully!");
+                    setIsEditModalVisible(false);
+                  } catch (err) {
+                    Alert.alert("Error", err.message || "Failed to update profile");
+                  }
+                }}
+                disabled={isUpdating}
+              >
+                {isUpdating ? (
+                  <ActivityIndicator color={colors.white} />
+                ) : (
+                  <Text style={styles.modalSaveText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -157,5 +229,64 @@ const styles = StyleSheet.create({
     color: colors.error,
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    width: '100%',
+    borderRadius: 12,
+    padding: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    color: colors.textPrimaryLight,
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: colors.textSecondaryLight,
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    fontSize: 16,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 16,
+  },
+  modalCancelBtn: {
+    padding: 12,
+    marginRight: 12,
+  },
+  modalCancelText: {
+    color: colors.gray600,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalSaveBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  modalSaveText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   }
 });

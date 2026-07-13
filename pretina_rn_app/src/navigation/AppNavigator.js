@@ -2,26 +2,35 @@ import React, { useState, useEffect } from 'react';
 import { View, Platform, Alert } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import auth from '@react-native-firebase/auth';
+import * as SplashScreen from 'expo-splash-screen';
 
 import BottomTabs from './BottomTabs';
 import WelcomeScreen from '../screens/auth/WelcomeScreen';
 import PhoneLoginScreen from '../screens/auth/PhoneLoginScreen';
 import OtpVerifyScreen from '../screens/auth/OtpVerifyScreen';
 import RegistrationDetailsScreen from '../screens/auth/RegistrationDetailsScreen';
-import AnimatedSplashScreen from '../screens/auth/AnimatedSplashScreen';
+
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 import CartScreen from '../screens/main/CartScreen';
 import CheckoutScreen from '../screens/main/CheckoutScreen';
 import OrdersScreen from '../screens/orders/OrdersScreen';
+import OrderDetailScreen from '../screens/orders/OrderDetailScreen';
 
 const Stack = createNativeStackNavigator();
 const MainStack = createNativeStackNavigator();
 
-const BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5001/api/v1' : 'http://localhost:5001/api/v1';
+import { API_BASE_URL } from '../config';
+const BASE_URL = API_BASE_URL;
 
 import AddressSelectionScreen from '../screens/main/AddressSelectionScreen';
+import ProductDetailScreen from '../screens/main/ProductDetailScreen';
+import CategoryProductsScreen from '../screens/main/CategoryProductsScreen';
+import BrandProductsScreen from '../screens/main/BrandProductsScreen';
+import SearchProductsScreen from '../screens/main/SearchProductsScreen';
 
 function MainNavigator() {
+  usePushNotifications();
   return (
     <MainStack.Navigator screenOptions={{ headerShown: false }}>
       <MainStack.Screen name="BottomTabs" component={BottomTabs} />
@@ -29,6 +38,11 @@ function MainNavigator() {
       <MainStack.Screen name="Checkout" component={CheckoutScreen} />
       <MainStack.Screen name="AddressSelection" component={AddressSelectionScreen} />
       <MainStack.Screen name="Orders" component={OrdersScreen} />
+      <MainStack.Screen name="OrderDetail" component={OrderDetailScreen} />
+      <MainStack.Screen name="ProductDetail" component={ProductDetailScreen} />
+      <MainStack.Screen name="CategoryProducts" component={CategoryProductsScreen} />
+      <MainStack.Screen name="BrandProducts" component={BrandProductsScreen} />
+      <MainStack.Screen name="SearchProducts" component={SearchProductsScreen} />
     </MainStack.Navigator>
   );
 }
@@ -67,7 +81,10 @@ export default function AppNavigator() {
              setAuthState('authenticated');
           }
         } else {
+          Alert.alert('Login Failed', data.message || 'The server rejected the login attempt.');
           setAuthState('unauthenticated');
+          // If the backend rejects the user, we should sign them out of Firebase too so they aren't stuck
+          auth().signOut().catch(() => {});
         }
       } catch (e) {
         console.log("Firebase login error:", e);
@@ -81,6 +98,17 @@ export default function AppNavigator() {
   const handleRegistrationComplete = () => {
     setAuthState('authenticated');
   };
+
+  // Hide splash only when auth state is resolved
+  useEffect(() => {
+    if (authState !== 'loading') {
+      // Small delay before transition starts
+      setTimeout(() => {
+        setShowSplash(false);
+        SplashScreen.hideAsync().catch(() => {});
+      }, 500);
+    }
+  }, [authState]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -105,8 +133,6 @@ export default function AppNavigator() {
           <Stack.Screen name="Main" component={MainNavigator} />
         )}
       </Stack.Navigator>
-      
-      {showSplash && <AnimatedSplashScreen onFinish={() => setShowSplash(false)} />}
     </View>
   );
 }

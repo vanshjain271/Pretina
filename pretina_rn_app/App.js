@@ -4,9 +4,13 @@ import { Provider } from 'react-redux';
 import { NavigationContainer } from '@react-navigation/native';
 import { store } from './src/store';
 import AppNavigator from './src/navigation/AppNavigator';
+import GlobalCart from './src/components/GlobalCart';
+import FloatingCartButton from './src/components/FloatingCartButton';
 
-import AnimatedSplashScreen from './src/screens/AnimatedSplashScreen';
 import { useEffect, useState } from 'react';
+import * as SplashScreen from 'expo-splash-screen';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function App() {
   const [appIsReady, setAppIsReady] = useState(false);
@@ -14,8 +18,6 @@ export default function App() {
   useEffect(() => {
     async function prepare() {
       try {
-        // Here you can do any pre-loading operations (fonts, api checks, etc.)
-        // We'll simulate a slight delay just to ensure the native splash shows briefly
         await new Promise(resolve => setTimeout(resolve, 500));
       } catch (e) {
         console.warn(e);
@@ -23,20 +25,23 @@ export default function App() {
         setAppIsReady(true);
       }
     }
-
     prepare();
   }, []);
 
+  if (!appIsReady) {
+    return null;
+  }
+
   return (
-    <AnimatedSplashScreen isAppReady={appIsReady}>
-      <Provider store={store}>
-        <SafeAreaProvider>
-          <NavigationContainer>
-            <AppNavigator />
-            <StatusBar style="auto" />
-          </NavigationContainer>
-        </SafeAreaProvider>
-      </Provider>
-    </AnimatedSplashScreen>
+    <Provider store={store}>
+      <SafeAreaProvider>
+        <NavigationContainer>
+          <AppNavigator />
+          <GlobalCart />
+          <FloatingCartButton />
+          <StatusBar style="auto" />
+        </NavigationContainer>
+      </SafeAreaProvider>
+    </Provider>
   );
 }

@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, ActivityIndicator, Alert, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
-
-const BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5001/api/v1' : 'http://localhost:5001/api/v1';
+import { useGetMyProfileQuery, useAddAddressMutation } from '../../store/apiSlice';
 
 export default function AddressSelectionScreen({ navigation, route }) {
-  // We expect a JWT token to be passed, or we assume cookie-based auth. Pretina backend uses JWT cookies or headers.
-  // We'll just fetch `/users/me` assuming cookies/headers are sent, or mock it if needed.
-  const [addresses, setAddresses] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const { data: profileData, isLoading, refetch } = useGetMyProfileQuery();
+  const [addAddressMutation, { isLoading: isAdding }] = useAddAddressMutation();
+  
+  const addresses = profileData?.data?.addresses || [];
+  
   const [showAddForm, setShowAddForm] = useState(false);
 
   // Form State
@@ -20,48 +20,19 @@ export default function AddressSelectionScreen({ navigation, route }) {
   const [state, setState] = useState('');
   const [pincode, setPincode] = useState('');
 
-  useEffect(() => {
-    fetchAddresses();
-  }, []);
-
-  const fetchAddresses = async () => {
-    setLoading(true);
-    try {
-      // In a real app we pass the auth token.
-      const res = await fetch(`${BASE_URL}/users/me`);
-      const data = await res.json();
-      if (data.success && data.data) {
-        setAddresses(data.data.addresses || []);
-      }
-    } catch (e) {
-      console.log('Error fetching addresses', e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleAddAddress = async () => {
     if (!name || !phone || !line1 || !city || !state || !pincode) {
       return Alert.alert('Error', 'Please fill in all required fields.');
     }
-    setLoading(true);
     try {
-      const res = await fetch(`${BASE_URL}/users/me/addresses`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone, line1, city, state, pincode, isDefault: true })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setAddresses(data.data);
+      const res = await addAddressMutation({ name, phone, line1, city, state, pincode, isDefault: true }).unwrap();
+      if (res.success) {
         setShowAddForm(false);
-        // Clear form
         setName(''); setPhone(''); setLine1(''); setCity(''); setState(''); setPincode('');
+        refetch(); // refresh the address list
       }
     } catch (e) {
       Alert.alert('Error', 'Failed to add address');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -94,8 +65,8 @@ export default function AddressSelectionScreen({ navigation, route }) {
             <TextInput style={styles.input} placeholder="Pincode" value={pincode} onChangeText={setPincode} keyboardType="number-pad" />
           </ScrollView>
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.saveButton} onPress={handleAddAddress} disabled={loading}>
-              <Text style={styles.saveButtonText}>{loading ? 'Saving...' : 'Save Address'}</Text>
+            <TouchableOpacity style={styles.saveButton} onPress={handleAddAddress} disabled={isAdding}>
+              <Text style={styles.saveButtonText}>{isAdding ? 'Saving...' : 'Save Address'}</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -113,7 +84,7 @@ export default function AddressSelectionScreen({ navigation, route }) {
         <View style={{ width: 50 }} />
       </View>
 
-      {loading ? (
+      {isLoading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
