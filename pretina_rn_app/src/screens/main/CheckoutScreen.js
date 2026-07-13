@@ -48,6 +48,12 @@ export default function CheckoutScreen({ navigation }) {
   const qrImageUrl = settings.qrImageUrl || 'https://dummyimage.com/200x200/000/fff&text=UPI+QR';
   const razorpayKey = settings.razorpayKeyId || '';
 
+  const deliveryFee = (settings.freeDeliveryAbove > 0 && totalAmount >= settings.freeDeliveryAbove)
+    ? 0
+    : (settings.deliveryFee || 0);
+
+  const grandTotal = totalAmount + deliveryFee;
+
   const [isQrModalVisible, setIsQrModalVisible] = useState(false);
 
   const handleSelectAddress = () => {
@@ -63,6 +69,10 @@ export default function CheckoutScreen({ navigation }) {
     }
     if (cartItems.length === 0) {
       Alert.alert('Error', 'Your cart is empty.');
+      return;
+    }
+    if (totalAmount < (settings.minOrderValue || 0)) {
+      Alert.alert('Error', `Minimum order value is ₹${settings.minOrderValue}. Please add more items to your cart.`);
       return;
     }
 
@@ -214,12 +224,16 @@ export default function CheckoutScreen({ navigation }) {
         <Text style={styles.sectionTitle}>Order Summary</Text>
         <View style={styles.summaryBox}>
           <View style={styles.summaryRow}>
-            <Text>Items Total:</Text>
-            <Text>₹{totalAmount}</Text>
+            <Text style={styles.summaryLabelSmall}>Subtotal:</Text>
+            <Text style={styles.summaryValueSmall}>₹{totalAmount}</Text>
           </View>
           <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabelSmall}>Delivery Fee:</Text>
+            <Text style={styles.summaryValueSmall}>{deliveryFee > 0 ? `+ ₹${deliveryFee}` : 'Free'}</Text>
+          </View>
+          <View style={[styles.summaryRow, { borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 8, marginTop: 4 }]}>
             <Text style={styles.boldText}>To Pay:</Text>
-            <Text style={styles.boldText}>₹{totalAmount}</Text>
+            <Text style={styles.boldText}>₹{grandTotal}</Text>
           </View>
         </View>
 
@@ -257,7 +271,11 @@ export default function CheckoutScreen({ navigation }) {
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.placeOrderButton} onPress={handlePlaceOrder} disabled={isProcessing}>
+        <TouchableOpacity 
+          style={[styles.placeOrderButton, (isProcessing || totalAmount < (settings.minOrderValue || 0)) && { opacity: 0.7 }]} 
+          onPress={handlePlaceOrder} 
+          disabled={isProcessing || totalAmount < (settings.minOrderValue || 0)}
+        >
           {isProcessing ? (
             <ActivityIndicator color={colors.white} />
           ) : (
@@ -410,6 +428,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 8,
+  },
+  summaryLabelSmall: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  summaryValueSmall: {
+    fontSize: 14,
+    color: colors.textPrimary,
   },
   boldText: {
     fontWeight: 'bold',

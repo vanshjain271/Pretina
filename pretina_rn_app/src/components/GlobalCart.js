@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectCartItems, selectCartTotalPrice, selectCartTotalItems, selectIsCartVisible, toggleCart, removeFromCart } from '../store/cartSlice';
+import { useGetSettingsQuery } from '../store/apiSlice';
 import { useNavigation } from '@react-navigation/native';
 import AddToCartButton from './AddToCartButton';
 import { colors } from '../theme/colors';
@@ -17,6 +18,17 @@ export default function GlobalCart() {
   const cartItems = useSelector(selectCartItems);
   const totalPrice = useSelector(selectCartTotalPrice);
   const totalItems = useSelector(selectCartTotalItems);
+
+  const { data: settingsData } = useGetSettingsQuery();
+  const settings = settingsData?.data || {};
+  const minOrderValue = settings.minOrderValue || 0;
+  
+  const deliveryFee = (settings.freeDeliveryAbove > 0 && totalPrice >= settings.freeDeliveryAbove)
+    ? 0
+    : (settings.deliveryFee || 0);
+    
+  const grandTotal = totalPrice + deliveryFee;
+  const canCheckout = totalPrice >= minOrderValue;
 
   if (!isCartVisible) return null;
 
@@ -93,14 +105,31 @@ export default function GlobalCart() {
               </ScrollView>
 
               <SafeAreaView style={styles.footer} edges={['bottom']}>
+                {minOrderValue > 0 && !canCheckout && (
+                  <View style={styles.warningBanner}>
+                    <Ionicons name="warning-outline" size={16} color="#B45309" />
+                    <Text style={styles.warningText}>
+                      Minimum order value is ₹{minOrderValue}. Add ₹{minOrderValue - totalPrice} more to checkout.
+                    </Text>
+                  </View>
+                )}
                 <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabelSmall}>Subtotal</Text>
+                  <Text style={styles.summaryValueSmall}>₹{totalPrice}</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabelSmall}>Delivery Fee {deliveryFee === 0 && totalPrice > 0 && '(Free)'}</Text>
+                  <Text style={styles.summaryValueSmall}>+ ₹{deliveryFee}</Text>
+                </View>
+                <View style={[styles.summaryRow, { borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 8, marginTop: 4 }]}>
                   <Text style={styles.summaryLabel}>Total Amount</Text>
-                  <Text style={styles.summaryValue}>₹{totalPrice}</Text>
+                  <Text style={styles.summaryValue}>₹{grandTotal}</Text>
                 </View>
                 
                 <TouchableOpacity 
-                  style={styles.checkoutBtn} 
+                  style={[styles.checkoutBtn, !canCheckout && styles.checkoutBtnDisabled]} 
                   activeOpacity={0.8}
+                  disabled={!canCheckout}
                   onPress={() => {
                     dispatch(toggleCart());
                     navigation.navigate('Checkout');
@@ -229,16 +258,42 @@ const styles = StyleSheet.create({
     color: colors.textPrimaryLight,
   },
   footer: {
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: colors.gray200,
+  },
+  warningBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    padding: 8,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  warningText: {
+    color: '#B45309',
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 6,
+    flex: 1,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 4,
+  },
+  summaryLabelSmall: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  summaryValueSmall: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.textPrimary,
   },
   summaryLabel: {
     fontSize: 16,
@@ -253,10 +308,14 @@ const styles = StyleSheet.create({
   checkoutBtn: {
     backgroundColor: colors.primary,
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 16,
+    justifyContent: 'center',
+    paddingVertical: 14,
     borderRadius: 12,
+    marginTop: 12,
+  },
+  checkoutBtnDisabled: {
+    backgroundColor: colors.gray400,
   },
   checkoutBtnText: {
     color: '#fff',
