@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Dimensions, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectCartItems, selectCartTotalPrice, selectCartTotalItems, selectIsCartVisible, toggleCart, removeFromCart } from '../store/cartSlice';
-import { useGetSettingsQuery } from '../store/apiSlice';
+import { useGetSettingsQuery, useSyncCartMutation } from '../store/apiSlice';
 import { useNavigation } from '@react-navigation/native';
 import AddToCartButton from './AddToCartButton';
 import { colors } from '../theme/colors';
@@ -29,6 +29,23 @@ export default function GlobalCart() {
     
   const grandTotal = totalPrice + deliveryFee;
   const canCheckout = totalPrice >= minOrderValue;
+
+  const [syncCart] = useSyncCartMutation();
+  const debounceRef = useRef(null);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      // Map Redux cart to the payload expected by backend /cart/sync
+      const mappedItems = cartItems.map(item => ({
+        product: item.product._id,
+        variant: item.variant ? item.variant._id : undefined,
+        variantName: item.variant ? item.variant.name : '',
+        quantity: item.quantity
+      }));
+      syncCart(mappedItems).catch(err => console.warn('Cart sync error:', err));
+    }, 2000); // 2 second debounce
+  }, [cartItems, syncCart]);
 
   if (!isCartVisible) return null;
 

@@ -456,28 +456,35 @@ export default function HomeScreen({ navigation }) {
             Elevate your style with Pretina's premium collection. Quality meets elegance.
           </Text>
           
-          <View style={styles.footerContactInfo}>
-            <View style={styles.footerRow}>
+          <View style={{ alignItems: 'center', marginBottom: 24 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
               <Ionicons name="call-outline" size={20} color={colors.primary} />
               <TouchableOpacity onPress={() => Linking.openURL('tel:+918169902291')}>
                 <Text style={styles.footerTextLink}>+91 8169902291</Text>
               </TouchableOpacity>
             </View>
-          </View>
-          
-          <View style={styles.footerSocials}>
-            <TouchableOpacity 
-              style={styles.socialBtn}
-              onPress={() => Linking.openURL('https://www.instagram.com/pretina.in?igsh=bHVnbzRieHd4NXNh&utm_source=qr')}
-            >
-              <Ionicons name="logo-instagram" size={22} color={'#E1306C'} />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.socialBtn}
-              onPress={() => Linking.openURL('whatsapp://send?phone=+918169902291&text=Hi')}
-            >
-              <Ionicons name="logo-whatsapp" size={22} color={'#2CD986'} />
-            </TouchableOpacity>
+            
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+              <Ionicons name="mail-outline" size={20} color={colors.primary} />
+              <TouchableOpacity onPress={() => Linking.openURL('mailto:parinenterprise456@gmail.com')}>
+                <Text style={styles.footerTextLink}>parinenterprise456@gmail.com</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.footerSocials}>
+              <TouchableOpacity 
+                style={styles.socialBtn}
+                onPress={() => Linking.openURL('https://www.instagram.com/pretina.in?igsh=bHVnbzRieHd4NXNh&utm_source=qr')}
+              >
+                <Ionicons name="logo-instagram" size={22} color={'#E1306C'} />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.socialBtn}
+                onPress={() => Linking.openURL('whatsapp://send?phone=+918169902291&text=Hi')}
+              >
+                <Ionicons name="logo-whatsapp" size={22} color={'#2CD986'} />
+              </TouchableOpacity>
+            </View>
           </View>
           
           <Text style={styles.footerCopyright}>© {new Date().getFullYear()} Pretina. All rights reserved.</Text>
@@ -778,8 +785,8 @@ const styles = StyleSheet.create({
     borderTopColor: '#eee',
   },
   footerLogo: {
-    width: 90,
-    height: 90,
+    width: 150,
+    height: 150,
     marginBottom: 16,
   },
   footerTitle: {
