@@ -101,9 +101,11 @@ export const apiSlice = createApi({
         method: 'POST',
         body: orderData,
       }),
+      invalidatesTags: ['Orders'],
     }),
     getMyOrders: builder.query({
       query: () => '/orders/my',
+      providesTags: ['Orders'],
     }),
     getOrderById: builder.query({
       query: (id) => `/orders/${id}`,

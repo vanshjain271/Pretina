@@ -137,7 +137,7 @@ export default function CheckoutScreen({ navigation }) {
           if (verifyRes.success) {
             dispatch(clearCart());
             Alert.alert('Success', 'Order placed successfully!');
-            navigation.navigate('Main');
+            navigation.replace('Orders');
           } else {
             throw new Error('Payment verification failed');
           }
@@ -150,7 +150,7 @@ export default function CheckoutScreen({ navigation }) {
         // COD
         dispatch(clearCart());
         Alert.alert('Success', 'Order placed successfully!');
-        navigation.navigate('Main');
+        navigation.replace('Orders');
       }
 
     } catch (error) {
