@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { colors } from '../../theme/colors';
 
@@ -8,6 +8,12 @@ export default function OtpVerifyScreen({ route, navigation }) {
   const { phoneNumber } = route.params;
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (code.length === 6) {
+      confirmCode();
+    }
+  }, [code]);
 
   async function confirmCode() {
     if (!code || code.length !== 6) {
@@ -25,6 +31,8 @@ export default function OtpVerifyScreen({ route, navigation }) {
       // navigation.navigate('Main'); // Usually handled by an Auth state listener in AppNavigator
     } catch (error) {
       setLoading(false);
+      // If auto-verify fails, clear the code so they can try again easily
+      setCode('');
       const errMessage = error.message || 'The code you entered is incorrect.';
       Alert.alert('Verification Failed', errMessage);
     }
