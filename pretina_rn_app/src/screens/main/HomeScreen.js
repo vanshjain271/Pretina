@@ -382,7 +382,9 @@ export default function HomeScreen({ navigation }) {
 
         {/* Categories */}
         <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Shop By Categories</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Shop By Categories</Text>
+          </View>
           {loadingCategories ? <ActivityIndicator color={colors.primary} /> : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
               {categories.map(cat => (
@@ -403,7 +405,9 @@ export default function HomeScreen({ navigation }) {
 
         {/* Brands */}
         <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Shop by Brand</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Shop by Brand</Text>
+          </View>
           {loadingBrands ? <ActivityIndicator color={colors.primary} /> : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
               {brands.map(brand => (
@@ -433,7 +437,11 @@ export default function HomeScreen({ navigation }) {
         )}
 
         {/* Banner Carousel 2 */}
-        {!loadingBanners && <AutoCarousel banners={displayMiddleBanners} navigation={navigation} />}
+        {!loadingBanners && (
+          <View style={{ marginBottom: 24 }}>
+            <AutoCarousel banners={displayMiddleBanners} navigation={navigation} />
+          </View>
+        )}
 
         {/* New Arrival */}
         {loadingProducts ? <ActivityIndicator color={colors.primary} /> : (
@@ -446,7 +454,11 @@ export default function HomeScreen({ navigation }) {
         )}
 
         {/* Banner Carousel 3 */}
-        {!loadingBanners && <AutoCarousel banners={displayBottomBanners} navigation={navigation} />}
+        {!loadingBanners && (
+          <View style={{ marginBottom: 24 }}>
+            <AutoCarousel banners={displayBottomBanners} navigation={navigation} />
+          </View>
+        )}
 
         {/* Premium Footer */}
         <View style={styles.footerContainer}>
@@ -778,7 +790,7 @@ const styles = StyleSheet.create({
   },
   footerContainer: {
     backgroundColor: '#fff',
-    marginTop: 32,
+    marginTop: 0,
     paddingHorizontal: 24,
     paddingVertical: 40,
     alignItems: 'center',

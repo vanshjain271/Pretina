@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, TextInput } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +28,7 @@ export default function CategoryProductsScreen({ route, navigation }) {
   
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     // In a real app we'd add this to apiSlice, but we can fetch directly here for speed
@@ -52,6 +53,20 @@ export default function CategoryProductsScreen({ route, navigation }) {
         <View style={{ width: 24 }} />
       </View>
 
+      <View style={styles.searchBarContainer}>
+        <View style={styles.searchBar}>
+          <Ionicons name="search-outline" size={20} color={colors.gray400} style={styles.searchIcon} />
+          <TextInput 
+            placeholder={`Search in ${categoryName}...`}
+            style={styles.searchInput}
+            placeholderTextColor={colors.gray400}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+          />
+        </View>
+      </View>
+
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -63,7 +78,7 @@ export default function CategoryProductsScreen({ route, navigation }) {
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.grid}>
-            {products.map(product => (
+            {products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).map(product => (
               <TouchableOpacity 
                 key={product._id} 
                 style={styles.productCard}
@@ -111,6 +126,31 @@ const styles = StyleSheet.create({
     color: colors.textPrimaryLight,
     flex: 1,
     textAlign: 'center',
+  },
+  searchBarContainer: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 44,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.textPrimaryLight,
   },
   center: {
     flex: 1,
