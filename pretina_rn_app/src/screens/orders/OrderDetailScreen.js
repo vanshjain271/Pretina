@@ -125,6 +125,7 @@ export default function OrderDetailScreen({ route, navigation }) {
           {order.shippingAddress ? (
             <View>
               <Text style={styles.addressName}>{order.shippingAddress.name}</Text>
+              {!!order.shippingAddress.companyName && <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary, marginBottom: 4 }}>{order.shippingAddress.companyName}</Text>}
               <Text style={styles.addressText}>{order.shippingAddress.line1}</Text>
               {order.shippingAddress.line2 ? <Text style={styles.addressText}>{order.shippingAddress.line2}</Text> : null}
               <Text style={styles.addressText}>{order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.pincode}</Text>

@@ -37,7 +37,7 @@ const normalizeInvoice = (raw) => {
 
   const addressStr = typeof addr === 'string'
     ? addr
-    : [addr.line1, addr.line2, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
+    : [addr.companyName, addr.line1, addr.line2, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
 
   const grandTotal = Number(order.total || raw.total || 0);
   const shipping = Number(order.deliveryFee || raw.deliveryFee || 0);

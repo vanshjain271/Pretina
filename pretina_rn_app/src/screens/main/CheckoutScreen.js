@@ -203,6 +203,7 @@ export default function CheckoutScreen({ navigation }) {
           {selectedAddress ? (
             <View>
               <Text style={styles.addressName}>{selectedAddress.name}</Text>
+              {!!selectedAddress.companyName && <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary, marginBottom: 4 }}>{selectedAddress.companyName}</Text>}
               <Text style={styles.addressText}>{selectedAddress.line1}</Text>
               <Text style={styles.addressText}>{selectedAddress.city}, {selectedAddress.state} - {selectedAddress.pincode}</Text>
               <Text style={styles.addressPhone}>Phone: {selectedAddress.phone}</Text>

@@ -82,7 +82,7 @@ const generateInvoice = async (req, res) => {
     const settings = await Settings.getSettings();
 
     const addr = order.shippingAddress;
-    const addressStr = [addr.line1, addr.line2, addr.city, addr.state, addr.pincode]
+    const addressStr = [addr.companyName, addr.line1, addr.line2, addr.city, addr.state, addr.pincode]
       .filter(Boolean).join(', ');
 
     const invoice = await Invoice.create({

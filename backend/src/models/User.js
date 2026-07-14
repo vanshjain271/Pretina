@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const addressSchema = new mongoose.Schema({
   label:       { type: String, default: 'Home' }, // Home, Work, Other
   name:        { type: String, required: true },
+  companyName: { type: String, default: '' },
   phone:       { type: String, required: true },
   line1:       { type: String, required: true },
   line2:       { type: String, default: '' },
