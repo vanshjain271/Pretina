@@ -109,20 +109,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   logoContainer: {
-    marginBottom: 24,
+    marginBottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
   logo: {
-    width: 200, // Significantly larger logo
-    height: 200,
+    width: 280, 
+    height: 280,
     resizeMode: 'contain',
   },
   textContainer: {
     alignItems: 'center',
   },
   title: {
-    fontSize: 38,
+    fontSize: 46,
     fontWeight: '800',
     color: '#1A1A1A',
     marginBottom: 16,
