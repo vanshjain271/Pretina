@@ -72,9 +72,13 @@ export default function BrandProductsScreen({ route, navigation }) {
                 
                 <View style={styles.productInfo}>
                   <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
-                  <View style={styles.priceRow}>
-                    <Text style={styles.priceText}>₹{product.salePrice}</Text>
-                    <AddToCartButton product={product} />
+                  <Text style={styles.priceText}>₹{product.salePrice}</Text>
+                  <View style={styles.moqPill}>
+                    <Ionicons name="cube-outline" size={10} color="#888" />
+                    <Text style={styles.moqText}>Minimum Order Quantity is {product.minOrderQty || 1} pcs</Text>
+                  </View>
+                  <View style={{ marginTop: 8 }}>
+                    <AddToCartButton product={product} fullWidth={true} />
                   </View>
                 </View>
               </TouchableOpacity>
@@ -160,6 +164,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  moqPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 20,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  moqText: {
+    fontSize: 10,
+    color: '#888',
+    marginLeft: 4,
+    fontWeight: '500',
   },
   priceText: {
     fontSize: 15,

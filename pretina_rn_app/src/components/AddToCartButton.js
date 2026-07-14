@@ -6,7 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { addToCart, updateQuantity, selectItemQuantity, setCartVisible } from '../store/cartSlice';
 import { colors } from '../theme/colors';
 
-export default function AddToCartButton({ product, variant }) {
+export default function AddToCartButton({ product, variant, fullWidth = false }) {
   const dispatch = useDispatch();
   const navigation = useNavigation();
   const quantity = useSelector((state) => selectItemQuantity(state, product._id, variant?._id));
@@ -47,15 +47,20 @@ export default function AddToCartButton({ product, variant }) {
 
   if (quantity === 0) {
     return (
-      <TouchableOpacity style={styles.addButton} onPress={handleAdd} activeOpacity={0.8}>
-        <Ionicons name="add" size={20} color={colors.white} />
+      <TouchableOpacity 
+        style={[styles.addButton, fullWidth && styles.addButtonFull]} 
+        onPress={handleAdd} 
+        activeOpacity={0.8}
+      >
+        <Ionicons name="add" size={fullWidth ? 18 : 20} color={colors.white} />
+        {fullWidth && <Text style={styles.addTextFull}>ADD</Text>}
       </TouchableOpacity>
     );
   }
 
   return (
-    <View style={styles.controlContainer}>
-      <TouchableOpacity style={styles.controlBtn} onPress={handleDecrement}>
+    <View style={[styles.controlContainer, fullWidth && styles.controlContainerFull]}>
+      <TouchableOpacity style={[styles.controlBtn, fullWidth && styles.controlBtnFull]} onPress={handleDecrement}>
         <Ionicons name="remove" size={16} color={colors.white} />
       </TouchableOpacity>
       
@@ -75,7 +80,7 @@ export default function AddToCartButton({ product, variant }) {
         </TouchableOpacity>
       )}
 
-      <TouchableOpacity style={styles.controlBtn} onPress={handleIncrement}>
+      <TouchableOpacity style={[styles.controlBtn, fullWidth && styles.controlBtnFull]} onPress={handleIncrement}>
         <Ionicons name="add" size={16} color={colors.white} />
       </TouchableOpacity>
     </View>
@@ -90,6 +95,19 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  addButtonFull: {
+    width: '100%',
+    height: 36,
+    flexDirection: 'row',
+    backgroundColor: '#00AEEF', // YouthQit blue
+    borderRadius: 8,
+  },
+  addTextFull: {
+    color: colors.white,
+    fontWeight: 'bold',
+    fontSize: 14,
+    marginLeft: 4,
   },
   controlContainer: {
     flexDirection: 'row',
@@ -106,6 +124,18 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  controlContainerFull: {
+    width: '100%',
+    height: 36,
+    borderColor: '#00AEEF',
+    borderRadius: 8,
+  },
+  controlBtnFull: {
+    backgroundColor: '#00AEEF',
+    width: 36,
+    borderTopLeftRadius: 6,
+    borderBottomLeftRadius: 6,
   },
   qtyText: {
     paddingHorizontal: 8,

@@ -25,7 +25,8 @@ export default function OtpVerifyScreen({ route, navigation }) {
       // navigation.navigate('Main'); // Usually handled by an Auth state listener in AppNavigator
     } catch (error) {
       setLoading(false);
-      Alert.alert('Invalid OTP', 'The code you entered is incorrect.');
+      const errMessage = error.message || 'The code you entered is incorrect.';
+      Alert.alert('Verification Failed', errMessage);
     }
   }
 

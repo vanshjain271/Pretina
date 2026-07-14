@@ -4,6 +4,7 @@ import auth from '@react-native-firebase/auth';
 import { colors } from '../../theme/colors';
 import { useGetMyProfileQuery, useUpdateProfileMutation, useGetSettingsQuery } from '../../store/apiSlice';
 import { API_BASE_URL } from '../../config';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfileScreen({ navigation }) {
   const { data: profileData, isLoading: profileLoading } = useGetMyProfileQuery();
@@ -27,7 +28,6 @@ export default function ProfileScreen({ navigation }) {
   const handleLogout = async () => {
     try {
       await auth().signOut();
-      // Auth state listener in AppNavigator will handle redirect
     } catch (e) {
       Alert.alert('Error', 'Could not logout');
     }
@@ -79,29 +79,28 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-  const menuItems = [
-    { title: 'My Orders', action: () => navigation.navigate('Orders') },
-    { title: 'Recently Ordered', action: () => navigation.navigate('RecentlyOrdered') },
-    { title: 'Manage Addresses', action: () => navigation.navigate('AddressSelection') },
-    { title: 'Notifications', action: () => navigation.navigate('Notifications') },
-    { title: 'Payment Bank Details', action: () => navigation.navigate('BankDetails') },
-    { title: 'Help & Support (Call Us)', action: () => handleSupportLink('call') },
-    { title: 'WhatsApp Support', action: () => handleSupportLink('whatsapp') },
-    { title: 'Email Support', action: () => handleSupportLink('email') },
-    { title: 'Visit Website', action: () => handleSupportLink('website') },
-    { title: 'Shipping Policy', action: () => navigation.navigate('Policy', { title: 'Shipping Policy', type: 'shippingPolicy' }) },
-    { title: 'Privacy Policy', action: () => navigation.navigate('Policy', { title: 'Privacy Policy', type: 'privacyPolicy' }) },
-    { title: 'Refund Policy', action: () => navigation.navigate('Policy', { title: 'Refund Policy', type: 'refundPolicy' }) },
-    { title: 'Terms & Conditions', action: () => navigation.navigate('Policy', { title: 'Terms & Conditions', type: 'termsAndConditions' }) },
-  ];
+  const renderSectionHeader = (title) => (
+    <Text style={styles.sectionHeader}>{title}</Text>
+  );
+
+  const renderMenuItem = (icon, title, action, color = colors.primary) => (
+    <TouchableOpacity style={styles.menuItem} onPress={action}>
+      <View style={[styles.iconBox, { backgroundColor: color + '15' }]}>
+        <Ionicons name={icon} size={20} color={color} />
+      </View>
+      <Text style={styles.menuItemText}>{title}</Text>
+      <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
+        <Text style={styles.headerTitle}>My Profile</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Profile Header Card */}
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{userProfile.name ? userProfile.name[0].toUpperCase() : 'U'}</Text>
@@ -111,26 +110,48 @@ export default function ProfileScreen({ navigation }) {
             <Text style={styles.userPhone}>{userProfile.phone || userProfile.email || 'No contact info'}</Text>
           </View>
           <TouchableOpacity style={styles.editButton} onPress={() => setIsEditModalVisible(true)}>
-            <Text style={styles.editButtonText}>Edit</Text>
+            <Ionicons name="pencil" size={18} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
-        <View style={styles.menuContainer}>
-          {menuItems.map((item, index) => (
-            <TouchableOpacity key={index} style={styles.menuItem} onPress={item.action}>
-              <Text style={styles.menuItemText}>{item.title}</Text>
-              <Text style={styles.chevron}>→</Text>
-            </TouchableOpacity>
-          ))}
+        {/* Account Settings */}
+        {renderSectionHeader('Account Settings')}
+        <View style={styles.menuGroup}>
+          {renderMenuItem('cube-outline', 'My Orders', () => navigation.navigate('Orders'), '#4CAF50')}
+          {renderMenuItem('time-outline', 'Recently Ordered', () => navigation.navigate('RecentlyOrdered'), '#FF9800')}
+          {renderMenuItem('location-outline', 'Manage Addresses', () => navigation.navigate('AddressSelection'), '#2196F3')}
+          {renderMenuItem('card-outline', 'Payment Bank Details', () => navigation.navigate('BankDetails'), '#9C27B0')}
+          {renderMenuItem('notifications-outline', 'Notifications', () => navigation.navigate('Notifications'), '#F44336')}
+        </View>
+
+        {/* Help & Support */}
+        {renderSectionHeader('Help & Support')}
+        <View style={styles.menuGroup}>
+          {renderMenuItem('call-outline', 'Call Us', () => handleSupportLink('call'), '#009688')}
+          {renderMenuItem('logo-whatsapp', 'WhatsApp Support', () => handleSupportLink('whatsapp'), '#25D366')}
+          {renderMenuItem('mail-outline', 'Email Support', () => handleSupportLink('email'), '#EA4335')}
+          {renderMenuItem('globe-outline', 'Visit Website', () => handleSupportLink('website'), '#3F51B5')}
+        </View>
+
+        {/* Legal & Policies */}
+        {renderSectionHeader('Legal & Policies')}
+        <View style={styles.menuGroup}>
+          {renderMenuItem('document-text-outline', 'Shipping Policy', () => navigation.navigate('Policy', { title: 'Shipping Policy', type: 'shippingPolicy' }), '#607D8B')}
+          {renderMenuItem('shield-checkmark-outline', 'Privacy Policy', () => navigation.navigate('Policy', { title: 'Privacy Policy', type: 'privacyPolicy' }), '#607D8B')}
+          {renderMenuItem('cash-outline', 'Refund Policy', () => navigation.navigate('Policy', { title: 'Refund Policy', type: 'refundPolicy' }), '#607D8B')}
+          {renderMenuItem('information-circle-outline', 'Terms & Conditions', () => navigation.navigate('Policy', { title: 'Terms & Conditions', type: 'termsAndConditions' }), '#607D8B')}
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={20} color={colors.error} style={{ marginRight: 8 }} />
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
           <Text style={styles.deleteText}>Delete Account</Text>
         </TouchableOpacity>
+        
+        <View style={{ height: 40 }} />
       </ScrollView>
 
       {/* Edit Profile Modal */}
@@ -194,18 +215,18 @@ export default function ProfileScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: '#F5F7FA', // Premium light grey bg
   },
   header: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     backgroundColor: colors.white,
     alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#Eef0f2',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: colors.textPrimaryLight,
   },
@@ -216,23 +237,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.white,
-    padding: 16,
-    borderRadius: 8,
+    padding: 20,
+    borderRadius: 16,
     marginBottom: 24,
-    borderWidth: 1,
-    borderColor: colors.gray200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
   },
   avatar: {
-    width: 60,
-    height: 60,
+    width: 64,
+    height: 64,
     backgroundColor: colors.primary,
-    borderRadius: 30,
+    borderRadius: 32,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
     color: colors.white,
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
   },
   userInfo: {
@@ -240,7 +264,7 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
   userName: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: colors.textPrimaryLight,
   },
@@ -250,60 +274,80 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   editButton: {
-    padding: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F0F7FF',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  editButtonText: {
-    color: colors.primary,
-    fontWeight: '600',
+  sectionHeader: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimaryLight,
+    marginBottom: 12,
+    marginLeft: 4,
+    marginTop: 8,
   },
-  menuContainer: {
+  menuGroup: {
     backgroundColor: colors.white,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.gray200,
-    overflow: 'hidden',
+    borderRadius: 16,
+    marginBottom: 24,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
   },
   menuItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  iconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
   },
   menuItemText: {
+    flex: 1,
     fontSize: 16,
     color: colors.textPrimaryLight,
-  },
-  chevron: {
-    color: colors.gray400,
+    fontWeight: '500',
   },
   logoutButton: {
-    marginTop: 24,
+    flexDirection: 'row',
+    marginTop: 8,
     backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.error,
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
   },
   logoutText: {
-    color: colors.textPrimaryLight,
+    color: colors.error,
     fontSize: 16,
     fontWeight: 'bold',
   },
   deleteButton: {
-    marginTop: 12,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.error,
+    marginTop: 16,
     padding: 16,
-    borderRadius: 8,
     alignItems: 'center',
   },
   deleteText: {
-    color: colors.error,
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: colors.gray500,
+    fontSize: 14,
+    fontWeight: '500',
   },
   modalOverlay: {
     flex: 1,
@@ -315,32 +359,34 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: '#fff',
     width: '100%',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 24,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 24,
     color: colors.textPrimaryLight,
   },
   inputLabel: {
     fontSize: 14,
     color: colors.textSecondaryLight,
     marginBottom: 8,
+    fontWeight: '600',
   },
   input: {
     borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    borderColor: '#Eef0f2',
+    backgroundColor: '#F5F7FA',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
     fontSize: 16,
   },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginTop: 16,
+    marginTop: 8,
   },
   modalCancelBtn: {
     padding: 12,
@@ -353,10 +399,10 @@ const styles = StyleSheet.create({
   },
   modalSaveBtn: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    minWidth: 80,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    minWidth: 100,
     alignItems: 'center',
   },
   modalSaveText: {
