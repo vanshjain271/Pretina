@@ -2,11 +2,25 @@ import { useEffect } from 'react';
 import messaging from '@react-native-firebase/messaging';
 import { Platform } from 'react-native';
 import { useRegisterFcmTokenMutation } from '../store/apiSlice';
+import { useNavigation } from '@react-navigation/native';
 
 export function usePushNotifications() {
   const [registerToken] = useRegisterFcmTokenMutation();
+  const navigation = useNavigation();
 
   useEffect(() => {
+    const handleNotificationOpen = (remoteMessage) => {
+      console.log('Notification caused app to open', remoteMessage);
+      if (remoteMessage?.data) {
+        const { linkType, linkId } = remoteMessage.data;
+        if (linkType === 'product' && linkId) {
+          navigation.navigate('ProductDetail', { productId: linkId });
+        } else if (linkType === 'category' && linkId) {
+          navigation.navigate('CategoryProducts', { categoryId: linkId });
+        }
+      }
+    };
+
     const requestPermissionAndGetToken = async () => {
       try {
         const authStatus = await messaging().requestPermission();
@@ -42,8 +56,20 @@ export function usePushNotifications() {
       }
     });
 
+
+    // Handle background notification opens
+    const unsubscribeOnNotificationOpenedApp = messaging().onNotificationOpenedApp(handleNotificationOpen);
+
+    // Handle quit state notification opens
+    messaging().getInitialNotification().then(remoteMessage => {
+      if (remoteMessage) {
+        handleNotificationOpen(remoteMessage);
+      }
+    });
+
     return () => {
       unsubscribeTokenRefresh();
+      unsubscribeOnNotificationOpenedApp();
     };
-  }, [registerToken]);
+  }, [registerToken, navigation]);
 }

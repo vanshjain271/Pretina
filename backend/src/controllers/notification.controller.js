@@ -58,7 +58,7 @@ const markAsRead = async (req, res, next) => {
    ───────────────────────────────────────────────────────────── */
 const sendNotification = async (req, res, next) => {
   try {
-    const { title, body, link, imageUrl, user: targetUserId, broadcast } = req.body;
+    const { title, body, linkType, linkId, link, imageUrl, user: targetUserId, broadcast } = req.body;
 
     if (!title || !body) {
       return res.status(400).json({ success: false, message: 'title and body are required.' });
@@ -66,7 +66,12 @@ const sendNotification = async (req, res, next) => {
 
     let sentCount = 0;
     let fcmResult = { success: false, reason: 'Not attempted' };
-    const data = { link: link || '', type: 'CUSTOM' };
+    const data = { 
+      link: link || '', 
+      linkType: linkType || 'none',
+      linkId: linkId || '',
+      type: 'CUSTOM' 
+    };
 
     if (broadcast || !targetUserId) {
       // ── Broadcast to all users ─────────────────────────────────

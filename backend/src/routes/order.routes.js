@@ -143,7 +143,6 @@ router.post('/', protect, async (req, res, next) => {
     const deliveryFee = settings?.freeDeliveryAbove > 0 && subtotal >= settings.freeDeliveryAbove
       ? 0
       : (settings?.deliveryFee || 0);
-
     const total = Math.max(0, subtotal - discount + deliveryFee);
 
     const order = await Order.create({

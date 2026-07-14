@@ -102,12 +102,13 @@ export const getReviews = (params) => api.get('/reviews', { params });
 export const updateReviewStatus = (id, data) => api.put(`/reviews/${id}/status`, data);
 export const deleteReview = (id) => api.delete(`/reviews/${id}`);
 
-// ── Blog ──────────────────────────────────────────────────────────
-export const getBlogs = (params) => api.get('/blog', { params });
-export const getBlog = (id) => api.get(`/blog/${id}`);
-export const createBlog = (data) => api.post('/blog', data);
-export const updateBlog = (id, data) => api.put(`/blog/${id}`, data);
-export const deleteBlog = (id) => api.delete(`/blog/${id}`);
+// ── Content Management (Blog) ─────────────────────────────────────
+export const getBlogs = (params) => api.get('/blogs', { params });
+export const getBlog = (id) => api.get(`/blogs/${id}`);
+export const createBlog = (data) => api.post('/blogs', data);
+export const updateBlog = (id, data) => api.put(`/blogs/${id}`, data);
+export const deleteBlog = (id) => api.delete(`/blogs/${id}`);
+export const uploadBlogImage = (data) => api.post('/blogs/upload', data);
 
 // ── Notifications ─────────────────────────────────────────────────
 // NOTE: Route is POST /notifications (not /notifications/send)

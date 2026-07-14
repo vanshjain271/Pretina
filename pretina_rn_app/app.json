@@ -2,7 +2,8 @@
   "expo": {
     "name": "Pretina",
     "slug": "pretina_rn_app",
-    "version": "1.0.0",
+    "scheme": "pretina",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

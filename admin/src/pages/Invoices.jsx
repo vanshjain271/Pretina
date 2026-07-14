@@ -408,6 +408,7 @@ const InvoiceModal = ({
   const summaryRows = [
     { label: 'Item Total',       val: fmtCurr(invoice.subtotal || invoice.amount) },
     ...(invoice.shipping > 0   ? [{ label: 'Delivery Charge', val: `+ ${fmtCurr(invoice.shipping)}`, color: DARK }] : []),
+    ...(invoice.wantsGstInvoice ? [{ label: 'GST (18%)', val: `+ ${fmtCurr(invoice.gstAmount)}`, color: DARK }] : []),
     ...(invoice.discount > 0   ? [{ label: 'Discount',        val: `- ${fmtCurr(invoice.discount)}`, color: '#059669' }] : []),
     { label: 'Total Amount',     val: fmtCurr(invoice.amount), color: BLUE },
     ...(invoice.tokenReceived > 0 ? [{ label: 'Advance Paid', val: `- ${fmtCurr(invoice.tokenReceived)}`, color: '#059669' }] : []),
@@ -454,6 +455,11 @@ const InvoiceModal = ({
           <Typography variant="overline" sx={{ fontWeight: 700, color: BLUE, display: 'block', mb: 0.5 }}>BILL TO</Typography>
           <Typography variant="body1" sx={{ fontWeight: 700 }}>{invoice.customerName}</Typography>
           <Typography variant="body2" color="text.secondary">{invoice.customerPhone}</Typography>
+          {invoice.wantsGstInvoice && invoice.gstNumber && (
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, mt: 0.5 }}>
+              GSTIN: {invoice.gstNumber}
+            </Typography>
+          )}
           {addr.addressLine1 && (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               {[addr.addressLine1, addr.addressLine2, addr.city, addr.state, addr.pincode && `- ${addr.pincode}`].filter(Boolean).join(', ')}
@@ -593,9 +599,13 @@ const Invoices = () => {
           customerName: ord.shippingAddress?.name || ord.user?.name || 'Unknown',
           customerPhone: ord.shippingAddress?.phone || ord.user?.phone || '-',
           amount: amt,
+          subtotal: ord.subtotal || 0,
           tokenReceived: ord.tokenReceived || 0,
           discount: ord.discount || 0,
           shipping: ord.deliveryFee || 0,
+          wantsGstInvoice: ord.wantsGstInvoice || false,
+          gstNumber: ord.gstNumber || '',
+          gstAmount: ord.gstAmount || 0,
           balance: bal,
           payStatus: pStatus,
           orderStatus: ord.status,

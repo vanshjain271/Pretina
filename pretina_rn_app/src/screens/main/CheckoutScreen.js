@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Alert, Image, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Alert, Image, ActivityIndicator, Modal, Switch } from 'react-native';
 import { colors } from '../../theme/colors';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectCartTotalPrice, selectCartItems, clearCart } from '../../store/cartSlice';
@@ -11,7 +11,8 @@ import {
   useCreateRazorpayOrderMutation, 
   useVerifyRazorpayPaymentMutation,
   useClearCartAPIMutation,
-  useAddToCartAPIMutation
+  useAddToCartAPIMutation,
+  useValidateCouponMutation
 } from '../../store/apiSlice';
 import RazorpayCheckout from 'react-native-razorpay';
 
@@ -20,7 +21,8 @@ export default function CheckoutScreen({ navigation }) {
   const [selectedPayment, setSelectedPayment] = useState('razorpay'); // razorpay, qr, cod, partial
   const [transactionId, setTransactionId] = useState('');
   const [selectedAddress, setSelectedAddress] = useState(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
   
   const totalAmount = useSelector(selectCartTotalPrice);
   const cartItems = useSelector(selectCartItems);
@@ -32,6 +34,7 @@ export default function CheckoutScreen({ navigation }) {
   const [verifyRazorpayPayment] = useVerifyRazorpayPaymentMutation();
   const [clearCartAPI] = useClearCartAPIMutation();
   const [addToCartAPI] = useAddToCartAPIMutation();
+  const [validateCoupon, { isLoading: isCouponLoading }] = useValidateCouponMutation();
 
   const { data: profileData } = useGetMyProfileQuery();
 
@@ -41,7 +44,7 @@ export default function CheckoutScreen({ navigation }) {
       const defaultAddr = addresses.find(a => a.isDefault) || addresses[0];
       setSelectedAddress(defaultAddr);
     }
-  }, [profileData, selectedAddress]);
+  }, [profileData]);
 
   const settings = settingsData?.data || {};
   const checkoutMessage = settings.orderNotes || "";
@@ -51,7 +54,27 @@ export default function CheckoutScreen({ navigation }) {
     ? 0
     : (settings.deliveryFee || 0);
 
-  const grandTotal = totalAmount + deliveryFee;
+  const grandTotal = totalAmount - (appliedCoupon?.discount || 0) + deliveryFee;
+
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) return;
+    try {
+      const res = await validateCoupon({ code: couponInput, cartTotal: totalAmount }).unwrap();
+      if (res.success) {
+        setAppliedCoupon({
+          code: res.coupon.code,
+          discount: res.discount
+        });
+      }
+    } catch (err) {
+      Alert.alert('Error', err?.data?.message || 'Invalid coupon code');
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput('');
+  };
 
   const [isQrModalVisible, setIsQrModalVisible] = useState(false);
 
@@ -101,6 +124,7 @@ export default function CheckoutScreen({ navigation }) {
       const orderPayload = {
         shippingAddressId: selectedAddress._id,
         paymentMethod: selectedPayment === 'razorpay' ? 'razorpay' : (selectedPayment === 'partial' ? 'partial_razorpay' : 'cod'),
+        couponCode: appliedCoupon ? appliedCoupon.code : undefined
       };
 
       const orderRes = await createOrder(orderPayload).unwrap();
@@ -173,12 +197,6 @@ export default function CheckoutScreen({ navigation }) {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Admin Checkout Message */}
-        {checkoutMessage ? (
-          <View style={styles.messageBanner}>
-            <Text style={styles.messageText}>{checkoutMessage}</Text>
-          </View>
-        ) : null}
 
         <Text style={styles.sectionTitle}>Delivery Address</Text>
         <TouchableOpacity style={styles.addressBox} onPress={handleSelectAddress}>
@@ -220,21 +238,72 @@ export default function CheckoutScreen({ navigation }) {
           })}
         </View>
 
+
+        <View style={styles.couponContainer}>
+          <Text style={styles.sectionTitle}>Apply Coupon</Text>
+          {appliedCoupon ? (
+            <View style={styles.appliedCouponBox}>
+              <View>
+                <Text style={styles.appliedCouponText}>'{appliedCoupon.code}' applied!</Text>
+                <Text style={styles.discountText}>You saved ₹{appliedCoupon.discount}</Text>
+              </View>
+              <TouchableOpacity onPress={handleRemoveCoupon}>
+                <Text style={styles.removeCouponText}>Remove</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.couponInputRow}>
+              <TextInput
+                style={styles.couponInput}
+                placeholder="Enter Coupon Code"
+                value={couponInput}
+                onChangeText={setCouponInput}
+                autoCapitalize="characters"
+              />
+              <TouchableOpacity 
+                style={styles.applyButton} 
+                onPress={handleApplyCoupon}
+                disabled={isCouponLoading || !couponInput.trim()}
+              >
+                {isCouponLoading ? (
+                  <ActivityIndicator color={colors.white} size="small" />
+                ) : (
+                  <Text style={styles.applyButtonText}>Apply</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
         <Text style={styles.sectionTitle}>Order Summary</Text>
         <View style={styles.summaryBox}>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabelSmall}>Subtotal:</Text>
             <Text style={styles.summaryValueSmall}>₹{totalAmount}</Text>
           </View>
+          {appliedCoupon && (
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabelSmall}>Discount ({appliedCoupon.code}):</Text>
+              <Text style={[styles.summaryValueSmall, { color: colors.success }]}>- ₹{appliedCoupon.discount}</Text>
+            </View>
+          )}
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabelSmall}>Delivery Fee:</Text>
             <Text style={styles.summaryValueSmall}>{deliveryFee > 0 ? `+ ₹${deliveryFee}` : 'Free'}</Text>
           </View>
+
           <View style={[styles.summaryRow, { borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 8, marginTop: 4 }]}>
             <Text style={styles.boldText}>To Pay:</Text>
             <Text style={styles.boldText}>₹{grandTotal}</Text>
           </View>
         </View>
+
+        {/* Admin Checkout Message */}
+        {checkoutMessage ? (
+          <View style={styles.messageBanner}>
+            <Text style={styles.messageText}>{checkoutMessage}</Text>
+          </View>
+        ) : null}
 
         <Text style={styles.sectionTitle}>Select Payment Method</Text>
 
@@ -587,5 +656,63 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  couponContainer: {
+    marginHorizontal: 16,
+    marginTop: 16,
+  },
+  couponInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  couponInput: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    padding: 12,
+    marginRight: 8,
+    fontSize: 14,
+    color: colors.textPrimary,
+  },
+  applyButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 20,
+    height: 46,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  applyButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  appliedCouponBox: {
+    backgroundColor: '#e6f4ea',
+    borderWidth: 1,
+    borderColor: colors.success,
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  appliedCouponText: {
+    color: colors.success,
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  discountText: {
+    color: colors.gray600,
+    fontSize: 12,
+    marginTop: 4,
+  },
+  removeCouponText: {
+    color: colors.error,
+    fontWeight: 'bold',
+    fontSize: 14,
   }
 });

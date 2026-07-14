@@ -8,7 +8,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { colors } from '../../theme/colors';
-import { useGetProductByIdQuery } from '../../store/apiSlice';
+import { useGetProductByIdQuery, useGetProductReviewsQuery, useSubmitReviewMutation } from '../../store/apiSlice';
 import { selectCartTotalItems, selectCartTotalPrice, toggleCart } from '../../store/cartSlice';
 import AddToCartButton from '../../components/AddToCartButton';
 import RenderHtml from 'react-native-render-html';
@@ -20,7 +20,12 @@ export default function ProductDetailScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
   const { data: productRes, isLoading, error } = useGetProductByIdQuery(productId);
+  const { data: reviewsRes } = useGetProductReviewsQuery(productId);
+  const [submitReview, { isLoading: isSubmittingReview }] = useSubmitReviewMutation();
   
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+
   const totalItems = useSelector(selectCartTotalItems);
   const totalPrice = useSelector(selectCartTotalPrice);
 
@@ -59,7 +64,7 @@ export default function ProductDetailScreen({ route, navigation }) {
 
   const handleShare = async () => {
     try {
-      const url = `https://pretina.in/product/${product._id}`;
+      const url = `https://pretina.app/product/${product._id}`;
       await Share.share({
         message: `Check out this amazing product: ${product.name}\n${url}`,
       });
@@ -67,6 +72,22 @@ export default function ProductDetailScreen({ route, navigation }) {
       console.log(error);
     }
   };
+
+  const handleSubmitReview = async () => {
+    if (reviewRating === 0) {
+      alert('Please select a rating');
+      return;
+    }
+    try {
+      await submitReview({ product: product._id, rating: reviewRating, comment: reviewComment }).unwrap();
+      alert('Review submitted successfully! It will be visible after approval.');
+      setReviewRating(0);
+      setReviewComment('');
+    } catch (err) {
+      alert(err?.data?.message || 'Failed to submit review. Make sure you are logged in.');
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -121,7 +142,7 @@ export default function ProductDetailScreen({ route, navigation }) {
           
           {product.brand && (
             <View style={styles.badgeWrapper}>
-              <Text style={styles.badgeTextWrapper}>{product.brand.name || 'Brand'}</Text>
+              <Text style={styles.badgeTextWrapper}>{product.brand?.name || 'Brand'}</Text>
             </View>
           )}
         </View>
@@ -166,7 +187,7 @@ export default function ProductDetailScreen({ route, navigation }) {
                 <Text style={styles.bulkHeaderText}>Quantity</Text>
                 <Text style={styles.bulkHeaderText}>Price / Unit</Text>
               </View>
-              {product.bulkPricing.map((tier, index) => (
+              {product.bulkPricing?.map((tier, index) => (
                 <View key={index} style={styles.bulkRow}>
                   <Text style={styles.bulkText}>{tier.minQty}+ {product.measuringUnit || 'Pcs'}</Text>
                   <Text style={[styles.bulkText, { color: colors.primary, fontWeight: '700' }]}>₹{tier.salePrice}</Text>
@@ -232,6 +253,77 @@ export default function ProductDetailScreen({ route, navigation }) {
             />
           ) : (
             <Text style={styles.description}>No additional details available.</Text>
+          )}
+        </View>
+
+        {/* Customer Reviews */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Customer Reviews</Text>
+          
+          {/* Write Review Form */}
+          <View style={styles.writeReviewContainer}>
+            <Text style={styles.writeReviewTitle}>Write a Review</Text>
+            <View style={styles.ratingStars}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity key={star} onPress={() => setReviewRating(star)}>
+                  <Ionicons 
+                    name={star <= reviewRating ? "star" : "star-outline"} 
+                    size={28} 
+                    color={star <= reviewRating ? "#FFB800" : "#ccc"} 
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput
+              style={styles.reviewInput}
+              placeholder="What did you think of this product?"
+              multiline
+              numberOfLines={3}
+              value={reviewComment}
+              onChangeText={setReviewComment}
+            />
+            <TouchableOpacity 
+              style={[styles.submitReviewBtn, (reviewRating === 0 || isSubmittingReview) && { opacity: 0.6 }]} 
+              onPress={handleSubmitReview}
+              disabled={reviewRating === 0 || isSubmittingReview}
+            >
+              {isSubmittingReview ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.submitReviewBtnText}>Submit Review</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Approved Reviews List */}
+          {reviewsRes?.data?.length > 0 ? (
+            reviewsRes.data.map((r, i) => (
+              <View key={i} style={styles.reviewCard}>
+                <View style={styles.reviewHeader}>
+                  <View style={styles.reviewUser}>
+                    <View style={styles.avatar}>
+                      <Text style={styles.avatarText}>{r.user?.name ? r.user.name.charAt(0).toUpperCase() : 'A'}</Text>
+                    </View>
+                    <View>
+                      <Text style={styles.reviewAuthor}>{r.user?.name || 'Anonymous'}</Text>
+                      <View style={{ flexDirection: 'row' }}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Ionicons 
+                            key={star} 
+                            name={star <= r.rating ? "star" : "star-outline"} 
+                            size={14} 
+                            color="#FFB800" 
+                          />
+                        ))}
+                      </View>
+                    </View>
+                  </View>
+                </View>
+                {r.comment ? <Text style={styles.reviewText}>{r.comment}</Text> : null}
+              </View>
+            ))
+          ) : (
+            <Text style={styles.noReviewsText}>No reviews yet. Be the first to review!</Text>
           )}
         </View>
         
@@ -596,4 +688,95 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  cartCountText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  writeReviewContainer: {
+    backgroundColor: '#F9FAFB',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  writeReviewTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 10,
+  },
+  ratingStars: {
+    flexDirection: 'row',
+    marginBottom: 12,
+    gap: 8,
+  },
+  reviewInput: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    color: colors.textPrimary,
+    textAlignVertical: 'top',
+    minHeight: 80,
+    marginBottom: 12,
+  },
+  submitReviewBtn: {
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  submitReviewBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  reviewCard: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingVertical: 16,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  reviewUser: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    color: colors.primary,
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  reviewAuthor: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: colors.textPrimary,
+  },
+  reviewText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
+    marginTop: 4,
+  },
+  noReviewsText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 20,
+  }
 });

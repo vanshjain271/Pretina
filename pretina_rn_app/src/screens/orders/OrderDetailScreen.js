@@ -158,6 +158,7 @@ export default function OrderDetailScreen({ route, navigation }) {
             <Text style={styles.label}>Delivery Fee:</Text>
             <Text style={styles.value}>₹{order.deliveryFee}</Text>
           </View>
+
           {order.discount > 0 && (
             <View style={styles.row}>
               <Text style={styles.label}>Discount:</Text>

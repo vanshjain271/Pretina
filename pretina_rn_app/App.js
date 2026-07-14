@@ -9,8 +9,24 @@ import FloatingCartButton from './src/components/FloatingCartButton';
 
 import { useEffect, useState } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Linking from 'expo-linking';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+const prefix = Linking.createURL('/');
+
+const linking = {
+  prefixes: [prefix, 'pretina://', 'https://pretina.app', 'http://pretina.app'],
+  config: {
+    screens: {
+      Main: {
+        screens: {
+          ProductDetail: 'product/:productId',
+        }
+      }
+    }
+  }
+};
 
 export default function App() {
   const [appIsReady, setAppIsReady] = useState(false);
@@ -35,7 +51,7 @@ export default function App() {
   return (
     <Provider store={store}>
       <SafeAreaProvider>
-        <NavigationContainer>
+        <NavigationContainer linking={linking}>
           <AppNavigator />
           <GlobalCart />
           <FloatingCartButton />

@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import {
   Box, Card, CardContent, Typography, Button, TextField, Grid,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  CircularProgress, Pagination, Autocomplete, Divider, Stack, IconButton
+  CircularProgress, Pagination, Autocomplete, Divider, Stack, IconButton,
+  Select, MenuItem, FormControl, InputLabel
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { getNotificationHistory, sendNotification, getCustomers, uploadImage } from '../api/endpoints';
+import { getNotificationHistory, sendNotification, getCustomers, uploadImage, getProducts, getCategories } from '../api/endpoints';
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -27,8 +28,13 @@ export default function Notifications() {
     title: '', 
     body: '', 
     link: '',
+    linkType: 'none',
+    linkId: '',
     imageUrl: ''
   });
+
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
 
   const loadHistory = async (pg = 1) => {
     setLoading(true);
@@ -57,7 +63,22 @@ export default function Notifications() {
         console.error('Failed to load customers', e);
       }
     };
+    
+    const loadLinkData = async () => {
+      try {
+        const [prodRes, catRes] = await Promise.all([
+          getProducts({ limit: 1000 }),
+          getCategories({ limit: 500 })
+        ]);
+        setProducts(prodRes.data?.data || []);
+        setCategories(catRes.data?.data || []);
+      } catch (err) {
+        console.error('Failed to load items for linking');
+      }
+    };
+
     loadCust();
+    loadLinkData();
   }, [page]);
 
   const handleUploadImage = async (e) => {
@@ -87,6 +108,8 @@ export default function Notifications() {
         title: form.title,
         body: form.body,
         link: form.link,
+        linkType: form.linkType,
+        linkId: form.linkId,
         imageUrl: form.imageUrl,
         type: 'alert',
       };
@@ -99,7 +122,7 @@ export default function Notifications() {
 
       await sendNotification(payload);
       toast.success('Notification sent successfully!');
-      setForm(prev => ({ ...prev, title: '', body: '', link: '', imageUrl: '' }));
+      setForm(prev => ({ ...prev, title: '', body: '', link: '', linkType: 'none', linkId: '', imageUrl: '' }));
       loadHistory(1);
     } catch (e) {
       toast.error('Failed to send notification');
@@ -192,15 +215,49 @@ export default function Notifications() {
             </Box>
 
             <Box>
-              <TextField
-                fullWidth
-                label="Action Link (Optional)"
-                placeholder="Where should the app navigate when tapped? (e.g. /product/64f1a2b... or https://link.com)"
-                value={form.link}
-                onChange={(e) => setForm({ ...form, link: e.target.value })}
-              />
+              <Typography variant="subtitle2" fontWeight={600} mb={1}>Deep Link (Optional)</Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={4}>
+                  <FormControl fullWidth>
+                    <InputLabel>Link Type</InputLabel>
+                    <Select
+                      value={form.linkType}
+                      label="Link Type"
+                      onChange={(e) => setForm({ ...form, linkType: e.target.value, linkId: '' })}
+                    >
+                      <MenuItem value="none">None</MenuItem>
+                      <MenuItem value="product">Product</MenuItem>
+                      <MenuItem value="category">Category</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                
+                {form.linkType === 'product' && (
+                  <Grid item xs={12} md={8}>
+                    <Autocomplete
+                      options={products}
+                      getOptionLabel={(option) => option.name || 'Unknown'}
+                      value={products.find(p => p._id === form.linkId) || null}
+                      onChange={(e, val) => setForm({ ...form, linkId: val ? val._id : '' })}
+                      renderInput={(params) => <TextField {...params} label="Select Product" />}
+                    />
+                  </Grid>
+                )}
+
+                {form.linkType === 'category' && (
+                  <Grid item xs={12} md={8}>
+                    <Autocomplete
+                      options={categories}
+                      getOptionLabel={(option) => option.name || 'Unknown'}
+                      value={categories.find(c => c._id === form.linkId) || null}
+                      onChange={(e, val) => setForm({ ...form, linkId: val ? val._id : '' })}
+                      renderInput={(params) => <TextField {...params} label="Select Category" />}
+                    />
+                  </Grid>
+                )}
+              </Grid>
               <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                If you enter a product ID or route here, the app will open it automatically.
+                If selected, the app will directly open this product or category when the user taps the notification.
               </Typography>
             </Box>
 

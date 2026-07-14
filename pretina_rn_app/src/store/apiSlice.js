@@ -7,7 +7,7 @@ const BASE_URL = API_BASE_URL;
 
 export const apiSlice = createApi({
   reducerPath: 'api',
-  tagTypes: ['Profile'],
+  tagTypes: ['Profile', 'Orders', 'Order', 'Review'],
   baseQuery: fetchBaseQuery({ 
     baseUrl: BASE_URL,
     prepareHeaders: async (headers) => {
@@ -129,6 +129,25 @@ export const apiSlice = createApi({
     getNotifications: builder.query({
       query: () => '/notifications',
     }),
+    validateCoupon: builder.mutation({
+      query: (data) => ({
+        url: '/coupons/validate',
+        method: 'POST',
+        body: data,
+      }),
+    }),
+    getProductReviews: builder.query({
+      query: (productId) => `/reviews/product/${productId}`,
+      providesTags: (result, error, id) => [{ type: 'Review', id }],
+    }),
+    submitReview: builder.mutation({
+      query: (data) => ({
+        url: '/reviews',
+        method: 'POST',
+        body: data,
+      }),
+      invalidatesTags: (result, error, { product }) => [{ type: 'Review', id: product }],
+    }),
   }),
 });
 
@@ -153,4 +172,7 @@ export const {
   useCreateRazorpayOrderMutation,
   useVerifyRazorpayPaymentMutation,
   useGetNotificationsQuery,
+  useValidateCouponMutation,
+  useGetProductReviewsQuery,
+  useSubmitReviewMutation,
 } = apiSlice;

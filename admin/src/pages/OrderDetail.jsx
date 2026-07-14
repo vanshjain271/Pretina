@@ -68,8 +68,10 @@ export default function OrderDetail() {
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 4, mt: 1 }}>
                 <Box sx={{ textAlign: 'right' }}>
                   <Typography variant="caption" color="text.secondary">Subtotal: ₹{order.subtotal}</Typography><br />
-                  {order.discount > 0 && <Typography variant="caption" color="success.main">Discount: -₹{order.discount}</Typography>}<br />
-                  {order.deliveryFee > 0 && <Typography variant="caption">Delivery: ₹{order.deliveryFee}</Typography>}<br />
+                  {order.discount > 0 && <><Typography variant="caption" color="success.main">Discount: -₹{order.discount}</Typography><br /></>}
+                  {order.deliveryFee > 0 && <><Typography variant="caption">Delivery: ₹{order.deliveryFee}</Typography><br /></>}
+                  {order.wantsGstInvoice && <><Typography variant="caption" color="info.main">GST Number: {order.gstNumber}</Typography><br /></>}
+                  {order.wantsGstInvoice && <><Typography variant="caption" color="info.main">GST (18%): +₹{order.gstAmount}</Typography><br /></>}
                   <Typography variant="subtitle2" fontWeight={700}>Total: ₹{order.total}</Typography>
                 </Box>
               </Box>
