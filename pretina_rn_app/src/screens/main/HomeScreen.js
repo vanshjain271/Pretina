@@ -523,12 +523,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerLogo: {
-    width: 90,
-    height: 80,
-    marginRight: -2,
+    width: 120,
+    height: 100,
+    marginLeft: -24,
+    marginRight: -26,
   },
   headerTitle: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '900',
     color: colors.textPrimaryLight,
   },
@@ -787,12 +788,13 @@ const styles = StyleSheet.create({
   footerLogo: {
     width: 240,
     height: 240,
-    marginBottom: -10,
+    marginBottom: -40,
   },
   footerTitle: {
     fontSize: 36,
     fontWeight: '900',
     color: colors.textPrimaryLight,
+    marginTop: -20,
     marginBottom: 4,
     letterSpacing: 1.5,
   },

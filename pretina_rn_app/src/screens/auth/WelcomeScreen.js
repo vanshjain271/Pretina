@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   logoContainer: {
-    marginBottom: 0,
+    marginBottom: -20,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -125,6 +125,7 @@ const styles = StyleSheet.create({
     fontSize: 46,
     fontWeight: '800',
     color: '#1A1A1A',
+    marginTop: -40,
     marginBottom: 16,
     textAlign: 'center',
     letterSpacing: 1.5, // Added letter spacing for a more premium look on the brand name
