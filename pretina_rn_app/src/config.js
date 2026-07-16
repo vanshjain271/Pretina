@@ -1,1 +1,1 @@
-export const API_BASE_URL = 'http://13.233.249.150:5001/api/v1';
+export const API_BASE_URL = 'https://api.pretina.in/api/v1';

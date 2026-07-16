@@ -3,7 +3,7 @@
     "name": "Pretina",
     "slug": "pretina_rn_app",
     "scheme": "pretina",
-    "version": "1.0.1",
+    "version": "1.0.13",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -14,10 +14,17 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.pretina.ajcompany"
+      "bundleIdentifier": "com.pretina.ajcompany",
+      "buildNumber": "14",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Pretina needs access to your camera for profile pictures.",
+        "NSPhotoLibraryUsageDescription": "Pretina needs access to your photo library for profile pictures."
+      }
     },
     "android": {
       "package": "com.pretina.ajcompany",
+      "versionCode": 14,
       "googleServicesFile": "./google-services.json"
     },
     "web": {

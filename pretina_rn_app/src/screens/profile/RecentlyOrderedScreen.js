@@ -1,11 +1,20 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, FlatList, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, FlatList, ActivityIndicator, TouchableOpacity, Image, Platform, StatusBar } from 'react-native';
 import { colors } from '../../theme/colors';
 import { useGetMyOrdersQuery } from '../../store/apiSlice';
+import { useDispatch } from 'react-redux';
+import { addToCart } from '../../store/cartSlice';
 
 export default function RecentlyOrderedScreen({ navigation }) {
-  const { data, isLoading } = useGetMyOrdersQuery();
+  const { data, isLoading, refetch } = useGetMyOrdersQuery();
   const orders = data?.data || [];
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
 
   // Filter orders from the last 30 days
   const recentOrders = useMemo(() => {
@@ -18,10 +27,19 @@ export default function RecentlyOrderedScreen({ navigation }) {
     });
   }, [orders]);
 
+  const dispatch = useDispatch();
+
   const handleReorder = (order) => {
-    // Navigate to OrderDetail to view the order and potentially add items to cart, or we could handle add to cart directly here.
-    // For now, easiest is just navigating to the order detail.
-    navigation.navigate('OrderDetail', { orderId: order._id });
+    if (order.items && order.items.length > 0) {
+      order.items.forEach(item => {
+        if (item.product) {
+          // If the order has a variant, we should pass it, but the order structure might just have variantName. 
+          // Assuming product has what we need or we pass as much as we have.
+          dispatch(addToCart({ product: item.product, variant: item.variant, quantity: item.quantity }));
+        }
+      });
+      navigation.navigate('Cart');
+    }
   };
 
   return (
@@ -43,6 +61,8 @@ export default function RecentlyOrderedScreen({ navigation }) {
           data={recentOrders}
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.listContent}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           ListEmptyComponent={
             <Text style={styles.emptyText}>No recent orders in the last 30 days.</Text>
           }
@@ -83,7 +103,11 @@ export default function RecentlyOrderedScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.backgroundLight },
+  container: { 
+    flex: 1, 
+    backgroundColor: colors.backgroundLight,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

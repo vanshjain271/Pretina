@@ -22,16 +22,23 @@ export default function OtpVerifyScreen({ route, navigation }) {
     }
     setLoading(true);
     try {
+      const auth = require('@react-native-firebase/auth').default;
+      if (auth().currentUser) {
+        // Auto-verify already succeeded in the background
+        setLoading(false);
+        return;
+      }
       const confirmation = getConfirmation();
       if (!confirmation) throw new Error('Session expired');
       await confirmation.confirm(code);
       setLoading(false);
-      // On success, Firebase Auth state listener will catch it
-      // But for now, we can manually navigate to a dummy Name screen or Main
-      // navigation.navigate('Main'); // Usually handled by an Auth state listener in AppNavigator
     } catch (error) {
       setLoading(false);
-      // If auto-verify fails, clear the code so they can try again easily
+      const auth = require('@react-native-firebase/auth').default;
+      if (auth().currentUser) {
+         // It threw an error because the code was consumed, but the user is logged in
+         return;
+      }
       setCode('');
       const errMessage = error.message || 'The code you entered is incorrect.';
       Alert.alert('Verification Failed', errMessage);

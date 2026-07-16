@@ -1,27 +1,22 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TextInput, TouchableOpacity } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TextInput, TouchableOpacity, Image } from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
+import { selectCartItems, selectCartTotalPrice, updateQuantity as updateCartQuantity } from '../../store/cartSlice';
 import { colors } from '../../theme/colors';
 
 export default function CartScreen({ navigation }) {
-  // Temporary State for Cart Items
-  const [cartItems, setCartItems] = useState([
-    { id: 1, name: 'Premium Lipstick', price: 500, quantity: '10' },
-    { id: 2, name: 'Foundation Cream', price: 1200, quantity: '5' }
-  ]);
+  const dispatch = useDispatch();
+  const cartItems = useSelector(selectCartItems);
+  const totalAmount = useSelector(selectCartTotalPrice);
 
   const minOrderValue = 5000;
   
-  const calculateTotal = () => {
-    return cartItems.reduce((total, item) => total + (item.price * (parseInt(item.quantity) || 0)), 0);
-  };
-
-  const totalAmount = calculateTotal();
   const canCheckout = totalAmount >= minOrderValue;
 
-  const updateQuantity = (id, text) => {
+  const handleUpdateQuantity = (item, text) => {
     // Only allow numbers
     const formatted = text.replace(/[^0-9]/g, '');
-    setCartItems(items => items.map(item => item.id === id ? { ...item, quantity: formatted } : item));
+    dispatch(updateCartQuantity({ productId: item.product._id, variantId: item.variant?._id, quantity: formatted }));
   };
 
   return (
@@ -41,25 +36,37 @@ export default function CartScreen({ navigation }) {
           </View>
         )}
 
-        {cartItems.map((item) => (
-          <View key={item.id} style={styles.cartItem}>
-            <View style={styles.itemImage} />
-            <View style={styles.itemDetails}>
-              <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.itemPrice}>₹{item.price}</Text>
+        {cartItems.map((item) => {
+          const key = item.variant ? `${item.product._id}_${item.variant._id}` : item.product._id;
+          const imageUrl = item.product?.images?.[0] || item.product?.image || null;
+          const name = item.product?.name || 'Unknown Product';
+          const price = item.variant ? (item.variant.salePrice || item.variant.price || item.product.salePrice) : item.product.salePrice;
+
+          return (
+            <View key={key} style={styles.cartItem}>
+              {imageUrl ? (
+                <Image source={{ uri: imageUrl }} style={styles.itemImage} />
+              ) : (
+                <View style={styles.itemImage} />
+              )}
+              <View style={styles.itemDetails}>
+                <Text style={styles.itemName}>{name}</Text>
+                {item.variant ? <Text style={{ fontSize: 12, color: colors.textSecondaryLight }}>Variant: {item.variant.name}</Text> : null}
+                <Text style={styles.itemPrice}>₹{price}</Text>
+              </View>
+              <View style={styles.quantityContainer}>
+                <Text style={styles.qtyLabel}>Qty:</Text>
+                <TextInput
+                  style={styles.quantityInput}
+                  keyboardType="number-pad"
+                  value={String(item.quantity)}
+                  onChangeText={(text) => handleUpdateQuantity(item, text)}
+                  maxLength={4} // Max 9999 items
+                />
+              </View>
             </View>
-            <View style={styles.quantityContainer}>
-              <Text style={styles.qtyLabel}>Qty:</Text>
-              <TextInput
-                style={styles.quantityInput}
-                keyboardType="number-pad"
-                value={item.quantity}
-                onChangeText={(text) => updateQuantity(item.id, text)}
-                maxLength={4} // Max 9999 items
-              />
-            </View>
-          </View>
-        ))}
+          );
+        })}
 
       </ScrollView>
 

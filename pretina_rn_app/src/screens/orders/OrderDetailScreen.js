@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Linking, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Linking, RefreshControl, Platform, StatusBar, Image } from 'react-native';
+import { useDispatch } from 'react-redux';
+import { addToCart } from '../../store/cartSlice';
 import { colors } from '../../theme/colors';
 import { useGetOrderByIdQuery, useCancelOrderMutation } from '../../store/apiSlice';
 
@@ -7,6 +9,7 @@ export default function OrderDetailScreen({ route, navigation }) {
   const { orderId } = route.params;
   const { data, isLoading, error, refetch, isFetching } = useGetOrderByIdQuery(orderId);
   const [cancelOrder, { isLoading: isCancelling }] = useCancelOrderMutation();
+  const dispatch = useDispatch();
 
   const onRefresh = React.useCallback(() => {
     refetch();
@@ -139,16 +142,24 @@ export default function OrderDetailScreen({ route, navigation }) {
         {/* Order Items */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Items</Text>
-          {order.items.map((item, index) => (
-            <View key={index} style={styles.itemRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemName}>{item.product?.name || item.name || 'Unknown Product'}</Text>
-                {item.variantName ? <Text style={styles.itemVariant}>Variant: {item.variantName}</Text> : null}
-                <Text style={styles.itemQty}>Qty: {item.quantity}</Text>
+          {order.items.map((item, index) => {
+            const imageUrl = item.product?.images?.[0] || item.image || null;
+            return (
+              <View key={index} style={[styles.itemRow, { alignItems: 'center' }]}>
+                {imageUrl ? (
+                  <Image source={{ uri: imageUrl }} style={{ width: 50, height: 50, borderRadius: 6, marginRight: 12, backgroundColor: colors.gray200 }} />
+                ) : (
+                  <View style={{ width: 50, height: 50, borderRadius: 6, marginRight: 12, backgroundColor: colors.gray200 }} />
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.itemName}>{item.product?.name || item.name || 'Unknown Product'}</Text>
+                  {item.variantName ? <Text style={styles.itemVariant}>Variant: {item.variantName}</Text> : null}
+                  <Text style={styles.itemQty}>Qty: {item.quantity}</Text>
+                </View>
+                <Text style={styles.itemPrice}>₹{item.total}</Text>
               </View>
-              <Text style={styles.itemPrice}>₹{item.total}</Text>
-            </View>
-          ))}
+            );
+          })}
           <View style={styles.divider} />
           
           <View style={styles.row}>
@@ -205,6 +216,23 @@ export default function OrderDetailScreen({ route, navigation }) {
           </TouchableOpacity>
         )}
         
+        {/* Reorder Button */}
+        <TouchableOpacity 
+          style={styles.reorderButton}
+          onPress={() => {
+            if (order.items && order.items.length > 0) {
+              order.items.forEach(item => {
+                if (item.product) {
+                  dispatch(addToCart({ product: item.product, variant: item.variant, quantity: item.quantity }));
+                }
+              });
+              navigation.navigate('Cart');
+            }
+          }}
+        >
+          <Text style={styles.reorderButtonText}>Reorder Items</Text>
+        </TouchableOpacity>
+
         <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
@@ -212,7 +240,11 @@ export default function OrderDetailScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.backgroundLight },
+  container: { 
+    flex: 1, 
+    backgroundColor: colors.backgroundLight,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0
+  },
   center: { justifyContent: 'center', alignItems: 'center' },
   header: {
     flexDirection: 'row',
@@ -273,5 +305,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
   },
-  cancelButtonText: { color: colors.white, fontWeight: 'bold', fontSize: 16 },
+  cancelButtonText: {
+    color: colors.white,
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  reorderButton: {
+    backgroundColor: '#00AEEF',
+    marginHorizontal: 16,
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  reorderButtonText: {
+    color: colors.white,
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
 });

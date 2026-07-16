@@ -43,7 +43,7 @@ const MarqueeText = ({ children }) => {
   );
 };
 
-const AutoCarousel = ({ banners, navigation }) => {
+const AutoCarousel = ({ banners, navigation, containerStyle }) => {
   const scrollRef = React.useRef(null);
   const [currentIndex, setCurrentIndex] = React.useState(0);
 
@@ -76,7 +76,7 @@ const AutoCarousel = ({ banners, navigation }) => {
   };
 
   return (
-    <View style={styles.bannerContainer}>
+    <View style={[styles.bannerContainer, containerStyle]}>
       <ScrollView 
         ref={scrollRef}
         horizontal 
@@ -343,7 +343,7 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.searchBar}>
           <Ionicons name="search-outline" size={20} color={colors.gray400} style={styles.searchIcon} />
           <TextInput 
-            placeholder="Search for items or products..."
+            placeholder="Search products..."
             style={styles.searchInput}
             placeholderTextColor={colors.gray400}
             value={searchQuery}
@@ -442,9 +442,7 @@ export default function HomeScreen({ navigation }) {
 
         {/* Banner Carousel 2 */}
         {!loadingBanners && (
-          <View style={{ marginBottom: 24 }}>
-            <AutoCarousel banners={displayMiddleBanners} navigation={navigation} />
-          </View>
+          <AutoCarousel banners={displayMiddleBanners} navigation={navigation} containerStyle={{ marginTop: 16, marginBottom: 16 }} />
         )}
 
         {/* New Arrival */}
@@ -459,9 +457,7 @@ export default function HomeScreen({ navigation }) {
 
         {/* Banner Carousel 3 */}
         {!loadingBanners && (
-          <View style={{ marginBottom: 24 }}>
-            <AutoCarousel banners={displayBottomBanners} navigation={navigation} />
-          </View>
+          <AutoCarousel banners={displayBottomBanners} navigation={navigation} containerStyle={{ marginTop: 16, marginBottom: 0 }} />
         )}
 
         {/* Premium Footer */}
@@ -539,10 +535,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerLogo: {
-    width: 120,
-    height: 100,
-    marginLeft: -24,
-    marginRight: -26,
+    width: 70,
+    height: 70,
+    marginLeft: -10,
+    marginRight: 4,
   },
   headerTitle: {
     fontSize: 28,
@@ -627,7 +623,7 @@ const styles = StyleSheet.create({
     height: 180,
     width: '100%',
     backgroundColor: '#FFF',
-    marginBottom: 5,
+    marginBottom: 0,
   },
   bannerImage: {
     width: width,

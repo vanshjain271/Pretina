@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, ActivityIndicator, Dimensions, RefreshControl } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
@@ -27,18 +27,30 @@ export default function SearchProductsScreen({ route, navigation }) {
   
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchProducts = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/products?search=${searchQuery}`);
+      const data = await res.json();
+      if(data && data.data) {
+         setProducts(data.data.products || data.data || []);
+      }
+    } catch(err) {
+      console.error(err);
+    }
+  }, [searchQuery]);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/products?search=${searchQuery}`)
-      .then(res => res.json())
-      .then(data => {
-        if(data && data.data) {
-           setProducts(data.data.products || data.data || []);
-        }
-      })
-      .catch(err => console.error(err))
-      .finally(() => setLoading(false));
-  }, [searchQuery]);
+    setLoading(true);
+    fetchProducts().finally(() => setLoading(false));
+  }, [fetchProducts]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchProducts();
+    setRefreshing(false);
+  }, [fetchProducts]);
 
   return (
     <View style={styles.container}>
@@ -55,11 +67,18 @@ export default function SearchProductsScreen({ route, navigation }) {
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : products.length === 0 ? (
-        <View style={styles.center}>
+        <ScrollView 
+          contentContainerStyle={styles.center}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+        >
           <Text style={styles.emptyText}>No products found for "{searchQuery}".</Text>
-        </View>
+        </ScrollView>
       ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+        >
           <View style={styles.grid}>
             {products.map(product => (
               <TouchableOpacity 

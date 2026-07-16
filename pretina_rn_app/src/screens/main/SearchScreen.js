@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, TextInput } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, TextInput, RefreshControl } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -28,26 +28,34 @@ export default function SearchScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchProducts = (query = '') => {
-    setLoading(true);
-    fetch(`${API_BASE_URL}/products?search=${query}`)
-      .then(res => res.json())
-      .then(data => {
-        if(data && data.data) {
-           setProducts(data.data.products || data.data || []);
-        }
-      })
-      .catch(err => console.error(err))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    fetchProducts();
+  const fetchProducts = useCallback(async (query = '') => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/products?search=${query}`);
+      const data = await res.json();
+      if(data && data.data) {
+         setProducts(data.data.products || data.data || []);
+      }
+    } catch(err) {
+      console.error(err);
+    }
   }, []);
 
+  useEffect(() => {
+    setLoading(true);
+    fetchProducts().finally(() => setLoading(false));
+  }, [fetchProducts]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchProducts(searchQuery);
+    setRefreshing(false);
+  }, [fetchProducts, searchQuery]);
+
   const handleSearch = () => {
-    fetchProducts(searchQuery);
+    setLoading(true);
+    fetchProducts(searchQuery).finally(() => setLoading(false));
   };
 
   return (
@@ -72,11 +80,18 @@ export default function SearchScreen({ navigation }) {
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : products.length === 0 ? (
-        <View style={styles.center}>
+        <ScrollView 
+          contentContainerStyle={styles.center}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+        >
           <Text style={styles.emptyText}>No products found.</Text>
-        </View>
+        </ScrollView>
       ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+        >
           <Text style={styles.resultText}>
             {searchQuery ? `Search Results for "${searchQuery}"` : 'Recommended Products'}
           </Text>

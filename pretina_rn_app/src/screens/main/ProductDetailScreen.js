@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { 
   View, Text, StyleSheet, ScrollView, TouchableOpacity, 
-  ActivityIndicator, Dimensions, Linking, TextInput, Share 
+  ActivityIndicator, Dimensions, Linking, TextInput, Share, RefreshControl 
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,12 +19,19 @@ export default function ProductDetailScreen({ route, navigation }) {
   const { productId } = route.params;
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
-  const { data: productRes, isLoading, error } = useGetProductByIdQuery(productId);
-  const { data: reviewsRes } = useGetProductReviewsQuery(productId);
+  const { data: productRes, isLoading, error, refetch: refetchProduct } = useGetProductByIdQuery(productId);
+  const { data: reviewsRes, refetch: refetchReviews } = useGetProductReviewsQuery(productId);
   const [submitReview, { isLoading: isSubmittingReview }] = useSubmitReviewMutation();
   
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchProduct(), refetchReviews()]);
+    setRefreshing(false);
+  }, [refetchProduct, refetchReviews]);
 
   const totalItems = useSelector(selectCartTotalItems);
   const totalPrice = useSelector(selectCartTotalPrice);
@@ -111,7 +118,11 @@ export default function ProductDetailScreen({ route, navigation }) {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+      >
         {/* Images */}
         <View style={styles.imageContainer}>
           <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>

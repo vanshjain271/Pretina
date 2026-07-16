@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,18 +28,30 @@ export default function BrandProductsScreen({ route, navigation }) {
   
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchProducts = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/products?brand=${brandId}`);
+      const data = await res.json();
+      if(data && data.data) {
+         setProducts(data.data.products || data.data || []);
+      }
+    } catch(err) {
+      console.error(err);
+    }
+  }, [brandId]);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/products?brand=${brandId}`)
-      .then(res => res.json())
-      .then(data => {
-        if(data && data.data) {
-           setProducts(data.data.products || data.data || []);
-        }
-      })
-      .catch(err => console.error(err))
-      .finally(() => setLoading(false));
-  }, [brandId]);
+    setLoading(true);
+    fetchProducts().finally(() => setLoading(false));
+  }, [fetchProducts]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchProducts();
+    setRefreshing(false);
+  }, [fetchProducts]);
 
   return (
     <View style={styles.container}>
@@ -56,11 +68,18 @@ export default function BrandProductsScreen({ route, navigation }) {
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : products.length === 0 ? (
-        <View style={styles.center}>
+        <ScrollView 
+          contentContainerStyle={styles.center}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+        >
           <Text style={styles.emptyText}>No products found for this brand.</Text>
-        </View>
+        </ScrollView>
       ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+        >
           <View style={styles.grid}>
             {products.map(product => (
               <TouchableOpacity 

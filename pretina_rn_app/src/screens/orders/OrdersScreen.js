@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Alert, ActivityIndicator, RefreshControl, Linking } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Alert, ActivityIndicator, RefreshControl, Linking, Platform, StatusBar } from 'react-native';
 import { Image } from 'expo-image';
 import { colors } from '../../theme/colors';
 import { useGetMyOrdersQuery } from '../../store/apiSlice';
@@ -152,9 +152,11 @@ export default function OrdersScreen({ navigation }) {
             else if (status === 'PENDING') { badgeBg = '#FFF3E0'; badgeColor = '#F57C00'; }
 
             return (
-              <View 
+              <TouchableOpacity 
                 key={order._id} 
                 style={styles.orderCard}
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('OrderDetail', { orderId: order._id })}
               >
                 <View style={styles.orderHeader}>
                   <Text style={styles.orderId}>#{order.orderNumber || order._id.slice(-6).toUpperCase()}</Text>
@@ -192,7 +194,7 @@ export default function OrdersScreen({ navigation }) {
                     </>
                   )}
                 </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </ScrollView>
@@ -205,6 +207,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F7F8FA', // Slight off-white background
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0
   },
   header: {
     flexDirection: 'row',

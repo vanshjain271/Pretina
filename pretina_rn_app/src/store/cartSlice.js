@@ -10,8 +10,9 @@ export const cartSlice = createSlice({
   initialState,
   reducers: {
     addToCart: (state, action) => {
-      const { product, variant } = action.payload;
+      const { product, variant, quantity } = action.payload;
       const minQty = product.minOrderQty || 1;
+      const addQty = quantity || minQty;
       const key = variant ? `${product._id}_${variant._id}` : product._id;
       
       const existingItem = state.items.find(item => {
@@ -20,9 +21,9 @@ export const cartSlice = createSlice({
       });
       
       if (existingItem) {
-        existingItem.quantity += minQty;
+        existingItem.quantity += addQty;
       } else {
-        state.items.push({ product, variant, quantity: minQty });
+        state.items.push({ product, variant, quantity: addQty });
       }
     },
     removeFromCart: (state, action) => {

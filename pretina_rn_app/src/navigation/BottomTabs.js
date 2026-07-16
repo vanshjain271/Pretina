@@ -5,14 +5,15 @@ import { colors } from '../theme/colors';
 import HomeScreen from '../screens/main/HomeScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import CategoryScreen from '../screens/main/CategoryScreen';
-
 import SearchScreen from '../screens/main/SearchScreen';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 const Tab = createBottomTabNavigator();
 
 export default function BottomTabs() {
+  const insets = useSafeAreaInsets();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -24,12 +25,14 @@ export default function BottomTabs() {
           borderTopColor: colors.gray200,
           elevation: 0,
           shadowOpacity: 0,
-          height: 60,
-          paddingBottom: 8,
+          height: 60 + (insets?.bottom || 0),
+          paddingBottom: 8 + (insets?.bottom || 0),
           paddingTop: 8,
         },
         tabBarLabelStyle: {
           fontWeight: '500',
+          fontSize: 11,
+          marginBottom: 4,
         },
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;

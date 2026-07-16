@@ -60,27 +60,29 @@ export default function AddToCartButton({ product, variant, fullWidth = false })
 
   return (
     <View style={[styles.controlContainer, fullWidth && styles.controlContainerFull]}>
-      <TouchableOpacity style={[styles.controlBtn, fullWidth && styles.controlBtnFull]} onPress={handleDecrement}>
+      <TouchableOpacity style={[styles.controlBtn, fullWidth && styles.controlBtnFullLeft]} onPress={handleDecrement}>
         <Ionicons name="remove" size={16} color={colors.white} />
       </TouchableOpacity>
       
-      {isEditing ? (
-        <TextInput
-          style={styles.input}
-          keyboardType="numeric"
-          autoFocus
-          value={inputValue}
-          onChangeText={setInputValue}
-          onBlur={handleInputSubmit}
-          onSubmitEditing={handleInputSubmit}
-        />
-      ) : (
-        <TouchableOpacity onPress={() => { setInputValue(quantity.toString()); setIsEditing(true); }}>
-          <Text style={styles.qtyText}>{quantity}</Text>
-        </TouchableOpacity>
-      )}
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        {isEditing ? (
+          <TextInput
+            style={styles.input}
+            keyboardType="numeric"
+            autoFocus
+            value={inputValue}
+            onChangeText={setInputValue}
+            onBlur={handleInputSubmit}
+            onSubmitEditing={handleInputSubmit}
+          />
+        ) : (
+          <TouchableOpacity onPress={() => { setInputValue(quantity.toString()); setIsEditing(true); }}>
+            <Text style={styles.qtyText}>{quantity}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
-      <TouchableOpacity style={[styles.controlBtn, fullWidth && styles.controlBtnFull]} onPress={handleIncrement}>
+      <TouchableOpacity style={[styles.controlBtn, fullWidth && styles.controlBtnFullRight]} onPress={handleIncrement}>
         <Ionicons name="add" size={16} color={colors.white} />
       </TouchableOpacity>
     </View>
@@ -89,7 +91,7 @@ export default function AddToCartButton({ product, variant, fullWidth = false })
 
 const styles = StyleSheet.create({
   addButton: {
-    backgroundColor: '#FF9800',
+    backgroundColor: colors.primary,
     width: 28,
     height: 28,
     borderRadius: 6,
@@ -100,7 +102,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 36,
     flexDirection: 'row',
-    backgroundColor: '#00AEEF', // YouthQit blue
+    backgroundColor: colors.primary,
     borderRadius: 8,
   },
   addTextFull: {
@@ -114,28 +116,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#FF9800',
+    borderColor: colors.primary,
     borderRadius: 6,
     height: 28,
+    minWidth: 90,
   },
   controlBtn: {
-    backgroundColor: '#FF9800',
+    backgroundColor: colors.primary,
     width: 28,
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
   controlContainerFull: {
     width: '100%',
     height: 36,
-    borderColor: '#00AEEF',
+    borderColor: colors.primary,
     borderRadius: 8,
   },
-  controlBtnFull: {
-    backgroundColor: '#00AEEF',
+  controlBtnFullLeft: {
+    backgroundColor: colors.primary,
     width: 36,
-    borderTopLeftRadius: 6,
-    borderBottomLeftRadius: 6,
+    borderTopLeftRadius: 7,
+    borderBottomLeftRadius: 7,
+  },
+  controlBtnFullRight: {
+    backgroundColor: colors.primary,
+    width: 36,
+    borderTopRightRadius: 7,
+    borderBottomRightRadius: 7,
   },
   qtyText: {
     paddingHorizontal: 8,

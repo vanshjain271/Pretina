@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, TextInput } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, TextInput, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,19 +29,30 @@ export default function CategoryProductsScreen({ route, navigation }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchProducts = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/products?category=${categoryId}`);
+      const data = await res.json();
+      if(data && data.data) {
+         setProducts(data.data.products || data.data || []);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }, [categoryId]);
 
   useEffect(() => {
-    // In a real app we'd add this to apiSlice, but we can fetch directly here for speed
-    fetch(`${API_BASE_URL}/products?category=${categoryId}`)
-      .then(res => res.json())
-      .then(data => {
-        if(data && data.data) {
-           setProducts(data.data.products || data.data || []);
-        }
-      })
-      .catch(err => console.error(err))
-      .finally(() => setLoading(false));
-  }, [categoryId]);
+    setLoading(true);
+    fetchProducts().finally(() => setLoading(false));
+  }, [fetchProducts]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchProducts();
+    setRefreshing(false);
+  }, [fetchProducts]);
 
   return (
     <View style={styles.container}>
@@ -72,11 +83,18 @@ export default function CategoryProductsScreen({ route, navigation }) {
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : products.length === 0 ? (
-        <View style={styles.center}>
+        <ScrollView 
+          contentContainerStyle={styles.center}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+        >
           <Text style={styles.emptyText}>No products found in this category.</Text>
-        </View>
+        </ScrollView>
       ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+        >
           <View style={styles.grid}>
             {products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).map(product => (
               <TouchableOpacity 
