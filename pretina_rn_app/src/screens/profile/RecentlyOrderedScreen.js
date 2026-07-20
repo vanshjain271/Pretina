@@ -40,7 +40,7 @@ export default function RecentlyOrderedScreen({ navigation }) {
           dispatch(addToCart({ product: item.product, variant: item.variant, quantity: item.quantity }));
         }
       });
-      navigation.navigate('Cart');
+      navigation.navigate('Checkout');
     }
   };
 
