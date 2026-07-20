@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Alert, Image, ActivityIndicator, Modal, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, Image, ActivityIndicator, Modal, Switch } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectCartTotalPrice, selectCartItems, clearCart } from '../../store/cartSlice';
@@ -10,6 +11,7 @@ import {
   useCreateOrderMutation, 
   useCreateRazorpayOrderMutation, 
   useVerifyRazorpayPaymentMutation,
+  useMarkPaymentFailedMutation,
   useClearCartAPIMutation,
   useAddToCartAPIMutation,
   useValidateCouponMutation
@@ -32,6 +34,7 @@ export default function CheckoutScreen({ navigation }) {
   const [createOrder] = useCreateOrderMutation();
   const [createRazorpayOrder] = useCreateRazorpayOrderMutation();
   const [verifyRazorpayPayment] = useVerifyRazorpayPaymentMutation();
+  const [markPaymentFailed] = useMarkPaymentFailedMutation();
   const [clearCartAPI] = useClearCartAPIMutation();
   const [addToCartAPI] = useAddToCartAPIMutation();
   const [validateCoupon, { isLoading: isCouponLoading }] = useValidateCouponMutation();
@@ -49,6 +52,12 @@ export default function CheckoutScreen({ navigation }) {
   const settings = settingsData?.data || {};
   const checkoutMessage = settings.orderNotes || "";
   const qrImageUrl = settings.qrImageUrl || 'https://dummyimage.com/200x200/000/fff&text=UPI+QR';
+
+  // Calculate advance amount for partial payment
+  const advanceAmount = settings.codAdvanceType === 'percentage'
+    ? Math.round((totalAmount * (settings.codAdvancePercentage || 10)) / 100)
+    : (settings.codAdvanceFixedAmount || 0);
+  const remainingAmount = Math.max(0, totalAmount - advanceAmount);
 
   const deliveryFee = (settings.freeDeliveryAbove > 0 && totalAmount >= settings.freeDeliveryAbove)
     ? 0
@@ -164,7 +173,7 @@ export default function CheckoutScreen({ navigation }) {
 
           if (verifyRes.success) {
             dispatch(clearCart());
-            Alert.alert('Success', 'Order placed successfully!');
+            Alert.alert('✅ Order Confirmed!', `Your order ${orderData.orderNumber} has been placed successfully.`);
             navigation.replace('Orders');
           } else {
             throw new Error('Payment verification failed');
@@ -173,7 +182,14 @@ export default function CheckoutScreen({ navigation }) {
           // error.code / error.description come from Razorpay SDK on user-cancel
           // error.data?.message comes from our backend on verify failure
           const errMsg = error?.data?.message || error?.description || error?.message || 'Please try again or contact support.';
-          Alert.alert('Payment Failed', errMsg);
+          // Mark order as payment_failed so admin can see it
+          try {
+            await markPaymentFailed({
+              orderId: orderData._id,
+              reason: errMsg,
+            }).unwrap();
+          } catch (_) { /* silent — order marking is best-effort */ }
+          Alert.alert('Payment Failed', errMsg + '\n\nYour order has been saved. You can retry payment from Orders screen.');
           // Order is created but unpaid — user can retry from Orders screen
           navigation.navigate('Orders');
         }
@@ -331,7 +347,7 @@ export default function CheckoutScreen({ navigation }) {
             onPress={() => setSelectedPayment('partial')}
           >
             <Text style={styles.paymentText}>COD (with Partial Payment)</Text>
-            <Text style={styles.paymentSubtext}>Pay a small booking amount now, rest on delivery</Text>
+            <Text style={styles.paymentSubtext}>Pay ₹{advanceAmount} now, ₹{remainingAmount} on delivery</Text>
           </TouchableOpacity>
         )}
 

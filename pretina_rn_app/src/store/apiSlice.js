@@ -126,6 +126,13 @@ export const apiSlice = createApi({
         body: verificationData,
       }),
     }),
+    markPaymentFailed: builder.mutation({
+      query: (data) => ({
+        url: '/payments/razorpay/failed',
+        method: 'POST',
+        body: data,
+      }),
+    }),
     getNotifications: builder.query({
       query: () => '/notifications',
     }),
@@ -171,6 +178,7 @@ export const {
   useRegisterFcmTokenMutation,
   useCreateRazorpayOrderMutation,
   useVerifyRazorpayPaymentMutation,
+  useMarkPaymentFailedMutation,
   useGetNotificationsQuery,
   useValidateCouponMutation,
   useGetProductReviewsQuery,

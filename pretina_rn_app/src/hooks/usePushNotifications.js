@@ -12,7 +12,13 @@ export function usePushNotifications() {
     const handleNotificationOpen = (remoteMessage) => {
       console.log('Notification caused app to open', remoteMessage);
       if (remoteMessage?.data) {
-        const { linkType, linkId } = remoteMessage.data;
+        const { linkType, linkId, type, orderId } = remoteMessage.data;
+        // Handle order status update notifications
+        if (type === 'ORDER_UPDATE' && orderId) {
+          navigation.navigate('Orders');
+          return;
+        }
+        // Handle product/category deep links
         if (linkType === 'product' && linkId) {
           navigation.navigate('ProductDetail', { productId: linkId });
         } else if (linkType === 'category' && linkId) {
