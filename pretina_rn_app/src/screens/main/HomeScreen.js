@@ -11,6 +11,7 @@ import {
   useGetHomepageProductsQuery,
   useGetSettingsQuery
 } from '../../store/apiSlice';
+import { API_BASE_URL } from '../../config';
 import AddToCartButton from '../../components/AddToCartButton';
 
 const { width } = Dimensions.get('window');

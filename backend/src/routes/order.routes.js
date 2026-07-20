@@ -40,7 +40,7 @@ router.get('/my', protect, async (req, res, next) => {
     const skip = (Number(page) - 1) * Number(limit);
     const [orders, total] = await Promise.all([
       Order.find({ user: req.user._id })
-        .populate('items.product', 'name images')
+        .populate('items.product', 'name images salePrice minOrderQty')
         .sort({ createdAt: -1 })
         .skip(skip).limit(Number(limit)),
       Order.countDocuments({ user: req.user._id }),

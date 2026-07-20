@@ -39,7 +39,7 @@ export default function AddToCartButton({ product, variant, fullWidth = false })
     setIsEditing(false);
     
     if (isNaN(newQty) || newQty <= 0) {
-      dispatch(updateQuantity({ productId: product._id, variantId: variant?._id, quantity: 0 }));
+      dispatch(updateQuantity({ productId: product._id, variantId: variant?._id, quantity: minQty }));
     } else {
       dispatch(updateQuantity({ productId: product._id, variantId: variant?._id, quantity: newQty }));
     }

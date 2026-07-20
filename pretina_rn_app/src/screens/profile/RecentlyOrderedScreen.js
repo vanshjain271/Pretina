@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, FlatList, ActivityIndicator, TouchableOpacity, Image, Platform, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Image, Platform, StatusBar } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
 import { useGetMyOrdersQuery } from '../../store/apiSlice';
 import { useDispatch } from 'react-redux';
@@ -8,6 +9,7 @@ import { addToCart } from '../../store/cartSlice';
 export default function RecentlyOrderedScreen({ navigation }) {
   const { data, isLoading, refetch } = useGetMyOrdersQuery();
   const orders = data?.data || [];
+  const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = React.useState(false);
 
   const onRefresh = React.useCallback(async () => {
@@ -43,8 +45,8 @@ export default function RecentlyOrderedScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={['right', 'bottom', 'left']}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backButton}>← Back</Text>
         </TouchableOpacity>

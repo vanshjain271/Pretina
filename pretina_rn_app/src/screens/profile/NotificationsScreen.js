@@ -1,15 +1,17 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, FlatList, ActivityIndicator, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, Image, TouchableOpacity } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
 import { useGetNotificationsQuery } from '../../store/apiSlice';
 
 export default function NotificationsScreen({ navigation }) {
   const { data, isLoading } = useGetNotificationsQuery();
   const notifications = data?.data || [];
+  const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={['right', 'bottom', 'left']}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backButton}>← Back</Text>
         </TouchableOpacity>

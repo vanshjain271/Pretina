@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     justifyContent: 'space-between',
     height: 70,
-    width: 90,
+    minWidth: 110,
   },
   subtotalRow: {
     flexDirection: 'row',

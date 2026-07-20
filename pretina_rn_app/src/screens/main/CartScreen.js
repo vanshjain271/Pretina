@@ -13,62 +13,81 @@ export default function CartScreen({ navigation }) {
   
   const canCheckout = totalAmount >= minOrderValue;
 
-  const handleUpdateQuantity = (item, text) => {
-    // Only allow numbers
-    const formatted = text.replace(/[^0-9]/g, '');
-    dispatch(updateCartQuantity({ productId: item.product._id, variantId: item.variant?._id, quantity: formatted }));
+const CartItemRow = ({ item }) => {
+  const [inputValue, setInputValue] = React.useState(String(item.quantity));
+  
+  // Sync if redux state changes externally
+  React.useEffect(() => {
+    setInputValue(String(item.quantity));
+  }, [item.quantity]);
+
+  const handleUpdateQuantity = () => {
+    const newQty = parseInt(inputValue, 10);
+    if (isNaN(newQty) || newQty <= 0) {
+      // Revert to min order qty or previous valid quantity
+      const minQty = item.product.minOrderQty || 1;
+      setInputValue(String(minQty));
+      dispatch(updateCartQuantity({ productId: item.product._id, variantId: item.variant?._id, quantity: minQty }));
+    } else {
+      dispatch(updateCartQuantity({ productId: item.product._id, variantId: item.variant?._id, quantity: newQty }));
+    }
   };
 
+  const key = item.variant ? `${item.product._id}_${item.variant._id}` : item.product._id;
+  const imageUrl = item.product?.images?.[0] || item.product?.image || null;
+  const name = item.product?.name || 'Unknown Product';
+  const price = item.variant ? (item.variant.salePrice || item.variant.price || item.product.salePrice) : item.product.salePrice;
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Your Cart</Text>
-        <View style={{ width: 50 }} />
+    <View key={key} style={styles.cartItem}>
+      {imageUrl ? (
+        <Image source={{ uri: imageUrl }} style={styles.itemImage} />
+      ) : (
+        <View style={styles.itemImage} />
+      )}
+      <View style={styles.itemDetails}>
+        <Text style={styles.itemName}>{name}</Text>
+        {item.variant ? <Text style={{ fontSize: 12, color: colors.textSecondaryLight }}>Variant: {item.variant.name}</Text> : null}
+        <Text style={styles.itemPrice}>₹{price}</Text>
       </View>
+      <View style={styles.quantityContainer}>
+        <Text style={styles.qtyLabel}>Qty:</Text>
+        <TextInput
+          style={styles.quantityInput}
+          keyboardType="number-pad"
+          value={inputValue}
+          onChangeText={(text) => setInputValue(text.replace(/[^0-9]/g, ''))}
+          onBlur={handleUpdateQuantity}
+          onSubmitEditing={handleUpdateQuantity}
+          maxLength={4} // Max 9999 items
+        />
+      </View>
+    </View>
+  );
+};
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {!canCheckout && (
-          <View style={styles.warningBanner}>
-            <Text style={styles.warningText}>Minimum order value is ₹{minOrderValue}. Add more items!</Text>
-          </View>
-        )}
+return (
+  <SafeAreaView style={styles.container}>
+    <View style={styles.header}>
+      <TouchableOpacity onPress={() => navigation.goBack()}>
+        <Text style={styles.backButton}>← Back</Text>
+      </TouchableOpacity>
+      <Text style={styles.headerTitle}>Your Cart</Text>
+      <View style={{ width: 50 }} />
+    </View>
 
-        {cartItems.map((item) => {
-          const key = item.variant ? `${item.product._id}_${item.variant._id}` : item.product._id;
-          const imageUrl = item.product?.images?.[0] || item.product?.image || null;
-          const name = item.product?.name || 'Unknown Product';
-          const price = item.variant ? (item.variant.salePrice || item.variant.price || item.product.salePrice) : item.product.salePrice;
+    <ScrollView contentContainerStyle={styles.scrollContent}>
+      {!canCheckout && (
+        <View style={styles.warningBanner}>
+          <Text style={styles.warningText}>Minimum order value is ₹{minOrderValue}. Add more items!</Text>
+        </View>
+      )}
 
-          return (
-            <View key={key} style={styles.cartItem}>
-              {imageUrl ? (
-                <Image source={{ uri: imageUrl }} style={styles.itemImage} />
-              ) : (
-                <View style={styles.itemImage} />
-              )}
-              <View style={styles.itemDetails}>
-                <Text style={styles.itemName}>{name}</Text>
-                {item.variant ? <Text style={{ fontSize: 12, color: colors.textSecondaryLight }}>Variant: {item.variant.name}</Text> : null}
-                <Text style={styles.itemPrice}>₹{price}</Text>
-              </View>
-              <View style={styles.quantityContainer}>
-                <Text style={styles.qtyLabel}>Qty:</Text>
-                <TextInput
-                  style={styles.quantityInput}
-                  keyboardType="number-pad"
-                  value={String(item.quantity)}
-                  onChangeText={(text) => handleUpdateQuantity(item, text)}
-                  maxLength={4} // Max 9999 items
-                />
-              </View>
-            </View>
-          );
-        })}
+      {cartItems.map((item) => (
+        <CartItemRow key={item.variant ? `${item.product._id}_${item.variant._id}` : item.product._id} item={item} />
+      ))}
 
-      </ScrollView>
+    </ScrollView>
 
       <View style={styles.bottomBar}>
         <View style={styles.totalContainer}>
