@@ -439,15 +439,32 @@ const InvoiceModal = ({
           {[
             { label: 'Invoice Date',  val: dayjs(invoice.invoiceDate).format('DD MMM YYYY'), border: BLUE },
             { label: 'Order Number',  val: invoice.orderNumber,                              border: '#3B82F6' },
-            { label: 'Order Status',  val: invoice.orderStatus,                              border: '#10B981' },
+            { label: 'Order Status',  val: (invoice.orderStatus || '').toUpperCase(),        border: '#10B981' },
+            { label: 'Payment Method', val:
+                invoice.paymentMethod === 'partial_razorpay' ? 'Partial / Razorpay' :
+                invoice.paymentMethod === 'razorpay' ? 'Razorpay (Full)' :
+                invoice.paymentMethod === 'cod' ? 'Cash on Delivery' :
+                invoice.paymentMethod === 'qr_upi' ? 'QR / UPI' :
+                (invoice.paymentMethod || '—').toUpperCase(),
+              border: invoice.paymentMethod === 'partial_razorpay' ? '#9333ea' : '#F59E0B' },
+            { label: 'Payment Status', val: (invoice.paymentStatus || 'pending').replace('_', ' ').toUpperCase(),
+              border: invoice.paymentStatus === 'paid' ? '#10B981' : invoice.paymentStatus === 'advance_paid' ? '#F59E0B' : '#EF4444' },
           ].map(c => (
-            <Grid item xs={12} sm={4} key={c.label}>
+            <Grid item xs={12} sm={6} md={4} key={c.label}>
               <Paper sx={{ p: 2, borderRadius: 2, borderLeft: `4px solid ${c.border}` }}>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>{c.label}</Typography>
                 <Typography variant="body1" sx={{ fontWeight: 700 }}>{c.val}</Typography>
               </Paper>
             </Grid>
           ))}
+          {invoice.razorpayPaymentId && (
+            <Grid item xs={12}>
+              <Paper sx={{ p: 2, borderRadius: 2, borderLeft: `4px solid #2563eb`, bgcolor: '#EFF6FF' }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Razorpay Payment ID</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace', color: '#1d4ed8' }}>{invoice.razorpayPaymentId}</Typography>
+              </Paper>
+            </Grid>
+          )}
         </Grid>
 
         {/* Bill To */}
@@ -585,10 +602,11 @@ const Invoices = () => {
       const rawOrders = res?.data?.data || [];
       const rows = rawOrders.map((ord) => {
         const amt = ord.total || 0;
-        const bal = Math.max(0, amt - (ord.tokenReceived || 0));
+        const tokenPaid = ord.tokenReceived || 0;
+        const bal = Math.max(0, amt - tokenPaid);
         let pStatus = 'UNPAID';
-        if (ord.paymentStatus === 'completed' || bal === 0) pStatus = 'PAID';
-        else if (ord.tokenReceived > 0) pStatus = 'PART_PAID';
+        if (ord.paymentStatus === 'paid' || bal === 0) pStatus = 'PAID';
+        else if (ord.paymentStatus === 'advance_paid' || tokenPaid > 0) pStatus = 'PART_PAID';
 
         return {
           id: ord._id,
@@ -600,7 +618,7 @@ const Invoices = () => {
           customerPhone: ord.shippingAddress?.phone || ord.user?.phone || '-',
           amount: amt,
           subtotal: ord.subtotal || 0,
-          tokenReceived: ord.tokenReceived || 0,
+          tokenReceived: tokenPaid,
           discount: ord.discount || 0,
           shipping: ord.deliveryFee || 0,
           wantsGstInvoice: ord.wantsGstInvoice || false,
@@ -609,10 +627,13 @@ const Invoices = () => {
           balance: bal,
           payStatus: pStatus,
           orderStatus: ord.status,
+          paymentMethod: ord.paymentMethod || '',
+          paymentStatus: ord.paymentStatus || 'pending',
+          razorpayPaymentId: ord.razorpayPaymentId || '',
           items: ord.items || [],
           billingAddress: ord.shippingAddress || {},
           user: ord.user || {},
-          payment: { amountPaid: ord.paymentStatus === 'completed' ? amt : ord.tokenReceived || 0 }
+          payment: { amountPaid: (ord.paymentStatus === 'paid') ? amt : tokenPaid }
         };
       });
 

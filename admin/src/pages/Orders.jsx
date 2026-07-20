@@ -388,11 +388,12 @@ export default function Orders() {
                   setPage(1);
                 }}
               />
-              <FormControl size="small" sx={{ minWidth: 120, bgcolor: '#fff' }}>
+              <FormControl size="small" sx={{ minWidth: 140, bgcolor: '#fff' }}>
                 <InputLabel>Payment</InputLabel>
                 <Select label="Payment" value={filters.paymentMethod} onChange={e => { setFilters(p => ({ ...p, paymentMethod: e.target.value })); setPage(1); }}>
                   <MenuItem value="">All</MenuItem>
-                  <MenuItem value="razorpay">Razorpay</MenuItem>
+                  <MenuItem value="razorpay">Razorpay (Full)</MenuItem>
+                  <MenuItem value="partial_razorpay">Partial (Advance)</MenuItem>
                   <MenuItem value="qr_upi">QR / UPI</MenuItem>
                   <MenuItem value="cod">COD</MenuItem>
                 </Select>
@@ -483,8 +484,23 @@ export default function Orders() {
                   
                   <TableCell>
                     <Typography variant="body2" fontWeight={700}>₹{order.total?.toLocaleString('en-IN')}</Typography>
-                    <Stack direction="row" spacing={1} mt={0.5}>
-                      <Typography variant="caption" sx={{ textTransform: 'uppercase', fontWeight: 600 }}>{order.paymentMethod?.replace('_', '/')}</Typography>
+                    {order.paymentMethod === 'partial_razorpay' && order.tokenReceived > 0 && (
+                      <Typography variant="caption" sx={{ color: 'success.main', fontWeight: 700, display: 'block' }}>
+                        Advance: ₹{order.tokenReceived?.toLocaleString('en-IN')} paid
+                      </Typography>
+                    )}
+                    <Stack direction="row" spacing={1} mt={0.5} flexWrap="wrap">
+                      <Typography variant="caption" sx={{ fontWeight: 700, color:
+                        order.paymentMethod === 'partial_razorpay' ? '#9333ea' :
+                        order.paymentMethod === 'razorpay' ? '#2563eb' :
+                        order.paymentMethod === 'cod' ? '#16a34a' : '#64748b'
+                      }}>
+                        {order.paymentMethod === 'partial_razorpay' ? 'PARTIAL/RAZORPAY' :
+                         order.paymentMethod === 'razorpay' ? 'RAZORPAY' :
+                         order.paymentMethod === 'cod' ? 'COD' :
+                         order.paymentMethod === 'qr_upi' ? 'QR/UPI' :
+                         (order.paymentMethod || '—').toUpperCase()}
+                      </Typography>
                       <Chip label={order.paymentStatus?.replace('_', ' ')} size="small" color={PAYMENT_STATUS_COLORS[order.paymentStatus] || 'default'} sx={{ height: 18, fontSize: '10px' }} />
                     </Stack>
                   </TableCell>
