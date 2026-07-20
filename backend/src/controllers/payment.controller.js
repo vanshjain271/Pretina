@@ -2,6 +2,7 @@ const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const Order = require('../models/Order');
 const Settings = require('../models/Settings');
+const NotificationService = require('../services/notification.service');
 
 const getRazorpayInstance = (keyId, keySecret) => new Razorpay({
   key_id: keyId,
@@ -115,7 +116,51 @@ exports.verifyRazorpayPayment = async (req, res, next) => {
       { new: true }
     );
 
+    // ── Fire confirmation notification to customer ────────────────
+    const userId = order.user;
+    NotificationService.sendOrderStatusNotification(userId, order, 'confirmed')
+      .catch(e => console.error('[payment.controller] Notify failed:', e.message));
+
+    // Save notification record for in-app history
+    NotificationService.saveRecord({
+      sentBy: null,
+      title: '✅ Order Confirmed!',
+      body: `Your order ${order.orderNumber} has been confirmed. Payment received via Razorpay${isPartial ? ' (Advance)' : ''}.`,
+      data: { type: 'ORDER_UPDATE', orderId: String(order._id), orderNumber: order.orderNumber, status: 'confirmed' },
+      targetType: 'specific_user',
+      targetUser: userId,
+      sentCount: 1,
+      status: 'sent',
+    }).catch(e => console.error('[payment.controller] Save record failed:', e.message));
+
     res.json({ success: true, order });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/v1/payments/razorpay/failed
+ * Called by app when Razorpay sheet is closed/payment fails.
+ * Marks the order paymentStatus as 'payment_failed' so admin can identify it.
+ */
+exports.markPaymentFailed = async (req, res, next) => {
+  try {
+    const { orderId, reason } = req.body;
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found.' });
+    if (order.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized.' });
+    }
+
+    order.paymentStatus = 'payment_failed';
+    order.statusHistory.push({
+      status: order.status,
+      note: `Payment failed or cancelled by customer. Reason: ${reason || 'Not specified'}.`,
+    });
+    await order.save();
+
+    res.json({ success: true, message: 'Order marked as payment failed.', order });
   } catch (err) {
     next(err);
   }

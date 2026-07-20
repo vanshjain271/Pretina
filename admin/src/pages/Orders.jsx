@@ -37,6 +37,7 @@ const STATUS_COLORS = {
 const PAYMENT_STATUS_COLORS = {
   pending: 'warning', advance_paid: 'info',
   paid: 'success', refunded: 'error', failed: 'error',
+  payment_failed: 'error',
 };
 
 export default function Orders() {

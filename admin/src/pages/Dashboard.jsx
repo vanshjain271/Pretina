@@ -68,7 +68,7 @@ function StatusBadge({ status }) {
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState('all_time');
+  const [period, setPeriod] = useState('today');
   const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
   const navigate = useNavigate();
 
@@ -81,8 +81,8 @@ export default function Dashboard() {
         params.dateFrom = dateRange.startDate;
         params.dateTo = dateRange.endDate;
       } else {
-        // If it's all_time or no dates are set
-        params.period = 'all';
+        // Pass the actual period ('today', 'week', 'month', 'all_time', etc.)
+        params.period = period === 'all_time' ? 'all' : period;
       }
       
       const res = await getDashboardOverview(params);
@@ -94,7 +94,7 @@ export default function Dashboard() {
     }
   };
 
-  useEffect(() => { fetchData(); }, [dateRange]);
+  useEffect(() => { fetchData(); }, [dateRange, period]);
 
   const ov = data || {};
 
