@@ -139,23 +139,27 @@ export default function CheckoutScreen({ navigation }) {
 
         const options = {
           description: 'Payment for your order',
-          image: 'https://your-logo-url.png', // Optional
           currency: rpOrderRes.currency || 'INR',
           key: rpOrderRes.keyId,
           amount: rpOrderRes.amount,
           name: 'Pretina',
           order_id: rpOrderRes.razorpayOrderId,
+          prefill: {
+            contact: profileData?.data?.phone || '',
+            name: profileData?.data?.name || '',
+          },
           theme: { color: colors.primary }
         };
 
         try {
           const data = await RazorpayCheckout.open(options);
           
-          // Verify
+          // Verify — MUST pass orderId so backend can find the order
           const verifyRes = await verifyRazorpayPayment({
+            orderId: orderData._id,
             razorpay_order_id: data.razorpay_order_id,
             razorpay_payment_id: data.razorpay_payment_id,
-            razorpay_signature: data.razorpay_signature
+            razorpay_signature: data.razorpay_signature,
           }).unwrap();
 
           if (verifyRes.success) {
@@ -166,9 +170,12 @@ export default function CheckoutScreen({ navigation }) {
             throw new Error('Payment verification failed');
           }
         } catch (error) {
-          Alert.alert('Payment Failed', `Payment cancelled or failed. Error: ${error.code} | ${error.description}`);
-          // Note: Order is created but unpaid. User can pay from OrdersScreen later.
-          navigation.navigate('Orders'); 
+          // error.code / error.description come from Razorpay SDK on user-cancel
+          // error.data?.message comes from our backend on verify failure
+          const errMsg = error?.data?.message || error?.description || error?.message || 'Please try again or contact support.';
+          Alert.alert('Payment Failed', errMsg);
+          // Order is created but unpaid — user can retry from Orders screen
+          navigation.navigate('Orders');
         }
       } else {
         // COD
