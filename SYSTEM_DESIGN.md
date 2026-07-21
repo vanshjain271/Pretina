@@ -173,7 +173,7 @@ graph TD
 
 ## 4. Payment Flow
 
-### 4.1 Razorpay Payment Flow
+### 4.1 Full Razorpay Payment Flow
 
 ```mermaid
 sequenceDiagram
@@ -183,7 +183,7 @@ sequenceDiagram
     participant RPY as 💳 Razorpay
     participant DB as 🍃 MongoDB
 
-    User->>App: Proceed to Checkout
+    User->>App: Proceed to Checkout (Full Payment)
     App->>API: POST /payments/razorpay/create { amount, orderId }
     API->>RPY: Create Razorpay Order (amount in paise)
     RPY-->>API: { razorpay_order_id }
@@ -196,25 +196,57 @@ sequenceDiagram
     App->>API: POST /payments/razorpay/verify { payment_id, signature, order_id }
     API->>API: Verify HMAC SHA256 signature
     alt Signature Valid
-        API->>DB: Update order status → paid
+        API->>DB: Update order → paymentStatus: paid, status: confirmed
+        API->>DB: Store razorpayPaymentId + razorpayOrderId
         API-->>App: { success: true }
-        App->>App: Show success screen
+        App->>App: Show success — invoice shows PAID IN FULL stamp
     else Signature Invalid
         API-->>App: 400 Payment verification failed
         App->>App: Show failure screen
     end
 ```
 
-### 4.2 COD (Cash on Delivery) Flow
+### 4.2 Partial Razorpay (Advance) Payment Flow
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant App as 📱 Mobile App
+    participant API as ⚙️ Backend API
+    participant RPY as 💳 Razorpay
+    participant DB as 🍃 MongoDB
+
+    User->>App: Proceed to Checkout (Partial / Advance)
+    App->>API: POST /payments/razorpay/create { amount: advanceAmount, orderId }
+    API->>RPY: Create Razorpay Order (advance in paise)
+    RPY-->>API: { razorpay_order_id }
+    API-->>App: { razorpay_order_id, key_id, amount }
+
+    App->>RPY: Open Razorpay Checkout SDK
+    User->>RPY: Pay advance amount only
+    RPY-->>App: { razorpay_payment_id, razorpay_signature }
+
+    App->>API: POST /payments/razorpay/verify { payment_id, signature, order_id }
+    API->>API: Verify HMAC SHA256 signature
+    alt Signature Valid
+        API->>DB: Update order → paymentStatus: advance_paid, store codAdvanceAmount
+        API-->>App: { success: true }
+        App->>App: Show success — invoice shows Advance Paid + Balance Due on Delivery
+    end
+```
+
+### 4.3 COD (Cash on Delivery) Flow
 
 ```mermaid
 graph LR
-    CHECKOUT["User places COD order"] --> ADVANCE{"COD Advance Required?"}
-    ADVANCE -->|Yes: 10% advance| QR_PAY["Pay advance via QR Code / UPI"]
-    ADVANCE -->|No| CONFIRM["Order confirmed instantly"]
-    QR_PAY --> MANUAL["Admin manually confirms payment"]
-    MANUAL --> CONFIRM
+    CHECKOUT["User places COD order"] --> METHOD{"Payment Method"}
+    METHOD --> |Full COD| CONFIRM["Order confirmed instantly\npaymentStatus: paid"]
+    METHOD --> |Partial COD\n(advance via UPI/QR)| QR_PAY["Pay advance amount"]
+    QR_PAY --> MANUAL["Admin manually confirms advance receipt"]
+    MANUAL --> CONFIRM2["Order confirmed\npaymentStatus: advance_paid"]
     CONFIRM --> DISPATCH["Order dispatched"]
+    CONFIRM2 --> DISPATCH
+    DISPATCH --> DELIVERED["Remaining balance collected on delivery"]
 ```
 
 ---
@@ -325,20 +357,28 @@ erDiagram
 
     ORDER {
         ObjectId _id PK
-        string orderNumber UK
+        string orderNumber UK "Atomic via Counter model"
         ObjectId user FK
         array items
         string status
         object shippingAddress
-        string paymentMethod
-        string paymentStatus
+        string paymentMethod "cod|partial_razorpay|full_razorpay"
+        string paymentStatus "pending|advance_paid|paid"
         number subtotal
         number discount
         number total
+        number codAdvanceAmount "Advance paid for partial/COD"
+        number tokenReceived "Legacy advance field"
         ObjectId coupon FK
         string razorpayOrderId
         string razorpayPaymentId
         date createdAt
+    }
+
+    COUNTER {
+        ObjectId _id PK
+        string name UK "e.g. orderNumber"
+        number seq "Auto-incremented atomically"
     }
 
     CART {
@@ -577,9 +617,21 @@ graph LR
 | OS | Ubuntu 22.04 LTS |
 | Instance | 2 vCPU, 1 GB RAM |
 | Process Manager | PM2 (cluster mode) |
-| Reverse Proxy | Cloudflare (no Nginx needed — Flexible SSL) |
+| Reverse Proxy | Cloudflare (Flexible SSL for app/API, Full SSL via Page Rules for PHP website) |
 | API Port | 5001 |
 | Domain | `api.pretina.in` |
+
+### DNS Architecture (Cloudflare)
+
+| Subdomain | Type | Target | Notes |
+|---|---|---|---|
+| `pretina.in` | A | `162.241.123.12` | Client's PHP website (webhostbox hosting) |
+| `www.pretina.in` | CNAME | `pretina.in` | Alias for PHP website |
+| `admin.pretina.in` | CNAME | Vercel Edge | Admin panel via Vercel |
+| `api.pretina.in` | A | AWS Lightsail IP | Backend API |
+| `mail.pretina.in` | A | `162.241.123.12` | Client email (DNS only, not proxied) |
+
+> **Note:** Cloudflare Page Rules are configured to apply **Full SSL** only to `pretina.in/*` and `www.pretina.in/*` to fix the PHP website's redirect loop, while the app and API remain on **Flexible SSL**.
 
 ### PM2 Configuration
 
@@ -603,13 +655,17 @@ pm2 save
 ## 12. Future Roadmap
 
 ### Short Term (v1.1)
-| Feature | Description |
-|---|---|
-| Wishlist | Save products for later |
-| Product Variants | Colour/size selector in app |
-| Advanced Filters | Filter by price range, brand, rating |
-| Order Returns | In-app return request flow |
-| Referral System | User referral codes with wallet rewards |
+| Feature | Status | Description |
+|---|---|---|
+| Product Variants | ✅ Done | Colour/size selector in app with quantity controls |
+| Partial Razorpay Payment | ✅ Done | Pay advance via Razorpay, balance on delivery |
+| Atomic Order Numbers | ✅ Done | Counter collection prevents duplicate order numbers |
+| Invoice PAID Stamp | ✅ Done | PDF shows PAID/Balance Due based on payment status |
+| Double-tap Order Guard | ✅ Done | useRef guard prevents duplicate orders on rapid tap |
+| Wishlist | 🔜 Planned | Save products for later |
+| Advanced Filters | 🔜 Planned | Filter by price range, brand, rating |
+| Order Returns | 🔜 Planned | In-app return request flow |
+| Referral System | 🔜 Planned | User referral codes with wallet rewards |
 
 ### Medium Term (v2.0)
 | Feature | Description |
@@ -646,4 +702,4 @@ Please ensure:
 
 ---
 
-*Last updated: July 2026 | Pretina V2.0*
+*Last updated: July 2026 | Pretina V2.0 — App v1.0.21*
