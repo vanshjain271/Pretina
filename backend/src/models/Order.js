@@ -106,15 +106,19 @@ const orderSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-// Auto-generate order number
+const Counter = require('./Counter');
+
+// Auto-generate order number using atomic counter (prevents E11000 duplicate key errors)
 orderSchema.pre('save', async function (next) {
   if (this.isNew && !this.orderNumber) {
     const date = new Date();
     const dateStr = `${date.getFullYear()}${String(date.getMonth()+1).padStart(2,'0')}${String(date.getDate()).padStart(2,'0')}`;
-    const count = await mongoose.model('Order').countDocuments();
-    this.orderNumber = `PRE-${dateStr}-${String(count + 1).padStart(4, '0')}`;
+    // getNextSequence is atomic — safe against concurrent order creation
+    const seq = await Counter.getNextSequence('orderNumber');
+    this.orderNumber = `PRE-${dateStr}-${String(seq).padStart(4, '0')}`;
   }
   next();
 });
+
 
 module.exports = mongoose.model('Order', orderSchema);

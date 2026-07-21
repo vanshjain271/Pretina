@@ -145,6 +145,21 @@ router.post('/', protect, async (req, res, next) => {
       : (settings?.deliveryFee || 0);
     const total = Math.max(0, subtotal - discount + deliveryFee);
 
+    // Calculate advance amount for partial payment
+    let codAdvanceAmount = 0;
+    if (paymentMethod === 'partial_razorpay' && settings) {
+      if (settings.codAdvanceType === 'percentage') {
+        codAdvanceAmount = Math.round((total * (settings.codAdvancePercentage || 10)) / 100);
+      } else {
+        codAdvanceAmount = settings.codAdvanceFixedAmount || 0;
+      }
+    }
+
+    // COD orders are auto-confirmed; Razorpay orders stay pending until payment verified
+    const isCod = paymentMethod === 'cod';
+    const initialStatus = isCod ? 'confirmed' : 'pending';
+    const initialPaymentStatus = isCod ? 'pending' : 'pending'; // COD payment pending until delivery
+
     const order = await Order.create({
       user: req.user._id,
       items,
@@ -165,9 +180,11 @@ router.post('/', protect, async (req, res, next) => {
         country: shippingAddress.country || 'India',
       },
       paymentMethod,
-      paymentStatus: 'pending',
+      paymentStatus: initialPaymentStatus,
+      codAdvanceAmount,
+      status: initialStatus,
       customerNote: customerNote || '',
-      statusHistory: [{ status: 'pending', note: 'Order placed by customer.', updatedBy: req.user._id }],
+      statusHistory: [{ status: initialStatus, note: isCod ? 'COD order confirmed.' : 'Order placed by customer.', updatedBy: req.user._id }],
     });
 
     // Clear cart
@@ -179,7 +196,7 @@ router.post('/', protect, async (req, res, next) => {
     // Notify admins of new order (async, non-blocking)
     NotificationService.notifyAdmins(
       '🛒 New Order!',
-      `Order ${order.orderNumber} placed for ₹${order.total}.`,
+      `Order ${order.orderNumber} placed for ₹${order.total} via ${paymentMethod.toUpperCase()}.`,
       { type: 'NEW_ORDER', orderId: String(order._id) }
     ).catch(e => console.error('[order.routes] Admin notify failed:', e.message));
 

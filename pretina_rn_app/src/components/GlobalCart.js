@@ -3,13 +3,12 @@ import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Dimensions
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
-import { selectCartItems, selectCartTotalPrice, selectCartTotalItems, selectIsCartVisible, toggleCart, removeFromCart } from '../store/cartSlice';
+import { selectCartItems, selectCartTotalPrice, selectCartTotalItems, selectIsCartVisible, toggleCart, removeFromCart, updateQuantity } from '../store/cartSlice';
 import { useGetSettingsQuery, useSyncCartMutation } from '../store/apiSlice';
 import { useNavigation } from '@react-navigation/native';
-import AddToCartButton from './AddToCartButton';
 import { colors } from '../theme/colors';
 
-const { height, width } = Dimensions.get('window');
+const { height } = Dimensions.get('window');
 
 export default function GlobalCart() {
   const dispatch = useDispatch();
@@ -22,11 +21,11 @@ export default function GlobalCart() {
   const { data: settingsData } = useGetSettingsQuery();
   const settings = settingsData?.data || {};
   const minOrderValue = settings.minOrderValue || 0;
-  
+
   const deliveryFee = (settings.freeDeliveryAbove > 0 && totalPrice >= settings.freeDeliveryAbove)
     ? 0
     : (settings.deliveryFee || 0);
-    
+
   const grandTotal = totalPrice + deliveryFee;
   const canCheckout = totalPrice >= minOrderValue;
 
@@ -36,7 +35,6 @@ export default function GlobalCart() {
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      // Map Redux cart to the payload expected by backend /cart/sync
       const mappedItems = cartItems.map(item => ({
         product: item.product._id,
         variant: item.variant ? item.variant._id : undefined,
@@ -44,7 +42,7 @@ export default function GlobalCart() {
         quantity: item.quantity
       }));
       syncCart(mappedItems).catch(err => console.warn('Cart sync error:', err));
-    }, 2000); // 2 second debounce
+    }, 2000);
   }, [cartItems, syncCart]);
 
   if (!isCartVisible) return null;
@@ -58,13 +56,13 @@ export default function GlobalCart() {
     >
       <View style={styles.overlay}>
         <TouchableOpacity style={styles.dismissArea} activeOpacity={1} onPress={() => dispatch(toggleCart())} />
-        
-        <KeyboardAvoidingView 
+
+        <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.bottomSheet}
         >
           <View style={styles.handleBar} />
-          
+
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Your Cart ({totalItems})</Text>
             <TouchableOpacity onPress={() => dispatch(toggleCart())} style={styles.closeBtn}>
@@ -83,37 +81,60 @@ export default function GlobalCart() {
           ) : (
             <>
               <ScrollView style={styles.cartList} showsVerticalScrollIndicator={false}>
-                {cartItems.map((item, index) => {
+                {cartItems.map((item) => {
                   const itemKey = item.variant ? `${item.product._id}_${item.variant._id}` : item.product._id;
-                  const itemPrice = item.variant ? (item.variant.salePrice || item.variant.price || item.product.salePrice) : item.product.salePrice;
-                  
+                  const itemPrice = item.variant
+                    ? (item.variant.salePrice || item.variant.price || item.product.salePrice)
+                    : item.product.salePrice;
+                  const minQty = item.product.minOrderQty || 1;
+                  const qty = item.quantity;
+
+                  const handleDecrement = () => {
+                    if (qty - minQty <= 0) {
+                      dispatch(removeFromCart({ productId: item.product._id, variantId: item.variant?._id }));
+                    } else {
+                      dispatch(updateQuantity({ productId: item.product._id, variantId: item.variant?._id, quantity: qty - minQty }));
+                    }
+                  };
+
+                  const handleIncrement = () => {
+                    dispatch(updateQuantity({ productId: item.product._id, variantId: item.variant?._id, quantity: qty + minQty }));
+                  };
+
                   return (
                     <View key={itemKey} style={styles.cartItem}>
-                      <Image 
-                        source={{ uri: item.product.images?.[0] }} 
-                        style={styles.itemImage} 
-                        contentFit="cover" 
+                      {/* Product Image */}
+                      <Image
+                        source={{ uri: item.product.images?.[0] }}
+                        style={styles.itemImage}
+                        contentFit="cover"
                       />
-                      <View style={styles.itemDetails}>
+
+                      {/* Product Info */}
+                      <View style={styles.itemInfo}>
                         <Text style={styles.itemName} numberOfLines={2}>{item.product.name}</Text>
                         {item.variant && (
-                          <Text style={styles.itemVariant}>Variant: {item.variant.name}</Text>
+                          <Text style={styles.itemVariant} numberOfLines={1}>Variant: {item.variant.name}</Text>
                         )}
-                        <View style={styles.itemPriceRow}>
-                          <Text style={styles.itemPrice}>₹{itemPrice}</Text>
-                        </View>
-                      </View>
-                      
-                      <View style={styles.itemActions}>
-                        <AddToCartButton product={item.product} variant={item.variant} />
-                        <View style={styles.subtotalRow}>
-                          <TouchableOpacity 
+                        <Text style={styles.itemPrice}>₹{itemPrice} × {qty} = <Text style={styles.itemSubtotal}>₹{itemPrice * qty}</Text></Text>
+
+                        {/* Quantity Controls + Delete in one row */}
+                        <View style={styles.qtyRow}>
+                          <View style={styles.qtyControl}>
+                            <TouchableOpacity style={styles.qtyBtn} onPress={handleDecrement}>
+                              <Ionicons name="remove" size={16} color="#fff" />
+                            </TouchableOpacity>
+                            <Text style={styles.qtyText}>{qty}</Text>
+                            <TouchableOpacity style={styles.qtyBtn} onPress={handleIncrement}>
+                              <Ionicons name="add" size={16} color="#fff" />
+                            </TouchableOpacity>
+                          </View>
+                          <TouchableOpacity
                             onPress={() => dispatch(removeFromCart({ productId: item.product._id, variantId: item.variant?._id }))}
                             style={styles.removeBtn}
                           >
                             <Ionicons name="trash-outline" size={18} color="#FF3B30" />
                           </TouchableOpacity>
-                          <Text style={styles.itemSubtotal}>₹{itemPrice * item.quantity}</Text>
                         </View>
                       </View>
                     </View>
@@ -142,9 +163,9 @@ export default function GlobalCart() {
                   <Text style={styles.summaryLabel}>Total Amount</Text>
                   <Text style={styles.summaryValue}>₹{grandTotal}</Text>
                 </View>
-                
-                <TouchableOpacity 
-                  style={[styles.checkoutBtn, !canCheckout && styles.checkoutBtnDisabled]} 
+
+                <TouchableOpacity
+                  style={[styles.checkoutBtn, !canCheckout && styles.checkoutBtnDisabled]}
                   activeOpacity={0.8}
                   disabled={!canCheckout}
                   onPress={() => {
@@ -214,65 +235,83 @@ const styles = StyleSheet.create({
   },
   cartList: {
     flex: 1,
-    paddingHorizontal: 16,
   },
+  // Each cart row: image on left, all info on right
   cartItem: {
     flexDirection: 'row',
-    paddingVertical: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-    alignItems: 'center',
+    borderBottomColor: '#f0f0f0',
+    alignItems: 'flex-start',
   },
   itemImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    width: 72,
+    height: 72,
+    borderRadius: 10,
+    backgroundColor: '#f5f5f5',
+    marginRight: 12,
+    flexShrink: 0,
   },
-  itemDetails: {
+  itemInfo: {
     flex: 1,
-    marginLeft: 12,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
   itemName: {
     fontSize: 14,
     fontWeight: '600',
     color: colors.textPrimaryLight,
-    marginBottom: 4,
+    marginBottom: 2,
+    lineHeight: 20,
   },
   itemVariant: {
     fontSize: 12,
     color: colors.textSecondaryLight,
     marginBottom: 4,
   },
-  itemPriceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   itemPrice: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: colors.primary,
-  },
-  itemActions: {
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    height: 70,
-    minWidth: 110,
-  },
-  subtotalRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  removeBtn: {
-    padding: 4,
+    fontSize: 12,
+    color: colors.textSecondaryLight,
+    marginBottom: 8,
   },
   itemSubtotal: {
+    fontWeight: 'bold',
+    color: colors.primary,
     fontSize: 14,
-    fontWeight: '700',
+  },
+  // Qty row: [- qty +] on left, trash on right
+  qtyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  qtyControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 8,
+    overflow: 'hidden',
+    height: 32,
+  },
+  qtyBtn: {
+    backgroundColor: colors.primary,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  qtyText: {
+    paddingHorizontal: 12,
+    fontSize: 14,
+    fontWeight: 'bold',
     color: colors.textPrimaryLight,
+    minWidth: 36,
+    textAlign: 'center',
+  },
+  removeBtn: {
+    padding: 6,
+    marginLeft: 8,
   },
   footer: {
     paddingHorizontal: 16,
@@ -361,5 +400,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-  }
+  },
 });

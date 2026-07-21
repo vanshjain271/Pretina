@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, Image, ActivityIndicator, Modal, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
@@ -12,8 +12,6 @@ import {
   useCreateRazorpayOrderMutation, 
   useVerifyRazorpayPaymentMutation,
   useMarkPaymentFailedMutation,
-  useClearCartAPIMutation,
-  useAddToCartAPIMutation,
   useValidateCouponMutation
 } from '../../store/apiSlice';
 import RazorpayCheckout from 'react-native-razorpay';
@@ -23,7 +21,9 @@ export default function CheckoutScreen({ navigation }) {
   const [selectedPayment, setSelectedPayment] = useState('razorpay'); // razorpay, qr, cod, partial
   const [transactionId, setTransactionId] = useState('');
   const [selectedAddress, setSelectedAddress] = useState(null);
-  const [isProcessing, setIsProcessing] = useState(false);  const [couponInput, setCouponInput] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const processingRef = useRef(false); // double-tap guard
+  const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   
   const totalAmount = useSelector(selectCartTotalPrice);
@@ -35,8 +35,6 @@ export default function CheckoutScreen({ navigation }) {
   const [createRazorpayOrder] = useCreateRazorpayOrderMutation();
   const [verifyRazorpayPayment] = useVerifyRazorpayPaymentMutation();
   const [markPaymentFailed] = useMarkPaymentFailedMutation();
-  const [clearCartAPI] = useClearCartAPIMutation();
-  const [addToCartAPI] = useAddToCartAPIMutation();
   const [validateCoupon, { isLoading: isCouponLoading }] = useValidateCouponMutation();
 
   const { data: profileData } = useGetMyProfileQuery();
@@ -94,6 +92,8 @@ export default function CheckoutScreen({ navigation }) {
   };
 
   const handlePlaceOrder = async () => {
+    // Double-tap guard — prevent multiple simultaneous submissions
+    if (processingRef.current) return;
     if (!selectedAddress) {
       Alert.alert('Error', 'Please select a delivery address first.');
       return;
@@ -107,24 +107,18 @@ export default function CheckoutScreen({ navigation }) {
       return;
     }
 
-    // if (selectedPayment === 'partial' && !isQrModalVisible) {
-    //   setIsQrModalVisible(true);
-    //   return;
-    // }
-
+    processingRef.current = true;
     setIsProcessing(true);
     try {
-      // 1. Sync cart using individual endpoint calls
+      // 1. Sync cart to server in a single atomic call
       try {
-        await clearCartAPI().unwrap();
-        for (const item of cartItems) {
-          await addToCartAPI({
-            productId: item.product._id,
-            variantId: item.variant ? item.variant._id : null,
-            variantName: item.variant ? item.variant.name : '',
-            quantity: item.quantity,
-          }).unwrap();
-        }
+        const mappedItems = cartItems.map(item => ({
+          product: item.product._id,
+          variant: item.variant ? item.variant._id : undefined,
+          variantName: item.variant ? item.variant.name : '',
+          quantity: item.quantity,
+        }));
+        await syncCart(mappedItems).unwrap();
       } catch (err) {
         console.warn('Cart sync failed, proceeding anyway:', err);
       }
@@ -147,7 +141,9 @@ export default function CheckoutScreen({ navigation }) {
         if (!rpOrderRes.success) throw new Error('Could not initialize Razorpay');
 
         const options = {
-          description: 'Payment for your order',
+          description: selectedPayment === 'partial'
+            ? `Advance payment for order ${orderData.orderNumber}`
+            : `Full payment for order ${orderData.orderNumber}`,
           currency: rpOrderRes.currency || 'INR',
           key: rpOrderRes.keyId,
           amount: rpOrderRes.amount,
@@ -173,30 +169,35 @@ export default function CheckoutScreen({ navigation }) {
 
           if (verifyRes.success) {
             dispatch(clearCart());
-            Alert.alert('✅ Order Confirmed!', `Your order ${orderData.orderNumber} has been placed successfully.`);
+            if (selectedPayment === 'partial') {
+              const adv = verifyRes.advancePaid || advanceAmount;
+              const bal = verifyRes.balanceDue || remainingAmount;
+              Alert.alert(
+                '✅ Order Confirmed!',
+                `Order ${orderData.orderNumber} placed!\n\nAdvance Paid: ₹${adv}\nBalance on Delivery: ₹${bal}`
+              );
+            } else {
+              Alert.alert('✅ Payment Successful!', `Order ${orderData.orderNumber} confirmed. Full payment of ₹${grandTotal} received.`);
+            }
             navigation.replace('Orders');
           } else {
             throw new Error('Payment verification failed');
           }
         } catch (error) {
-          // error.code / error.description come from Razorpay SDK on user-cancel
-          // error.data?.message comes from our backend on verify failure
           const errMsg = error?.data?.message || error?.description || error?.message || 'Please try again or contact support.';
-          // Mark order as payment_failed so admin can see it
           try {
-            await markPaymentFailed({
-              orderId: orderData._id,
-              reason: errMsg,
-            }).unwrap();
-          } catch (_) { /* silent — order marking is best-effort */ }
+            await markPaymentFailed({ orderId: orderData._id, reason: errMsg }).unwrap();
+          } catch (_) { /* silent */ }
           Alert.alert('Payment Failed', errMsg + '\n\nYour order has been saved. You can retry payment from Orders screen.');
-          // Order is created but unpaid — user can retry from Orders screen
           navigation.navigate('Orders');
         }
       } else {
-        // COD
+        // COD — order is already confirmed by backend
         dispatch(clearCart());
-        Alert.alert('Success', 'Order placed successfully!');
+        Alert.alert(
+          '✅ Order Placed!',
+          `Order ${orderData.orderNumber} confirmed!\n\nPay ₹${grandTotal} when your order arrives.`
+        );
         navigation.replace('Orders');
       }
 
@@ -204,6 +205,7 @@ export default function CheckoutScreen({ navigation }) {
       console.log('Order error:', error);
       Alert.alert('Error', error?.data?.message || error.message || 'Something went wrong while placing order');
     } finally {
+      processingRef.current = false;
       setIsProcessing(false);
       setIsQrModalVisible(false);
     }

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, Animated, Easing, Linking, TextInput, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   useGetBannersQuery,
   useGetCategoriesQuery,
@@ -255,6 +256,15 @@ export default function HomeScreen({ navigation }) {
   const [toastMessage, setToastMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        // Clear search query when screen loses focus
+        setSearchQuery('');
+      };
+    }, [])
+  );
+
   const { data: bannersRes, isLoading: loadingBanners, refetch: refetchBanners } = useGetBannersQuery('');
   const { data: categoriesRes, isLoading: loadingCategories, refetch: refetchCategories } = useGetCategoriesQuery();
   const { data: brandsRes, isLoading: loadingBrands, refetch: refetchBrands } = useGetBrandsQuery();
@@ -357,6 +367,11 @@ export default function HomeScreen({ navigation }) {
               }
             }}
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
+              <Ionicons name="close-circle" size={18} color={colors.gray400} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -577,6 +592,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingHorizontal: 16,
     paddingBottom: 8,
+    zIndex: 10,
+    elevation: 10,
   },
   searchBar: {
     flexDirection: 'row',

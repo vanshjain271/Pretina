@@ -3,7 +3,7 @@
     "name": "Pretina",
     "slug": "pretina_rn_app",
     "scheme": "pretina",
-    "version": "1.0.13",
+    "version": "1.0.18",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -24,7 +24,7 @@
     },
     "android": {
       "package": "com.pretina.ajcompany",
-      "versionCode": 14,
+      "versionCode": 18,
       "googleServicesFile": "./google-services.json"
     },
     "web": {

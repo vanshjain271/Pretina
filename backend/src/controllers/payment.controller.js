@@ -91,30 +91,37 @@ exports.verifyRazorpayPayment = async (req, res, next) => {
     const isPartial = order.paymentMethod === 'partial_razorpay';
     const newPaymentStatus = isPartial ? 'advance_paid' : 'paid';
     
-    // If it was partial, let's also update the tokenReceived amount so admin knows how much was paid
-    let updateFields = {
-      paymentStatus: newPaymentStatus,
-      status: 'confirmed',
-      razorpayPaymentId: razorpay_payment_id,
-      $push: { statusHistory: { status: 'confirmed', note: `Payment received via Razorpay (${isPartial ? 'Advance' : 'Full'}).` } },
-    };
-    
+    // Calculate advance amount for partial payment
+    let advanceAmount = 0;
     if (isPartial) {
-      // Calculate what they paid based on Razorpay verification (we could also check razorpay order amount but we know it's the advance)
-      let advanceAmount = 0;
       if (settings.codAdvanceType === 'percentage') {
-        advanceAmount = (order.total * (settings.codAdvancePercentage || 10)) / 100;
+        advanceAmount = Math.round((order.total * (settings.codAdvancePercentage || 10)) / 100);
       } else {
         advanceAmount = settings.codAdvanceFixedAmount || 0;
       }
-      updateFields.tokenReceived = advanceAmount;
     }
 
-    order = await Order.findByIdAndUpdate(
-      orderId,
-      updateFields,
-      { new: true }
-    );
+    const updateFields = {
+      paymentStatus: newPaymentStatus,
+      status: 'confirmed',
+      razorpayPaymentId: razorpay_payment_id,
+      $push: {
+        statusHistory: {
+          status: 'confirmed',
+          note: isPartial
+            ? `Advance payment of \u20b9${advanceAmount} received via Razorpay. Balance of \u20b9${order.total - advanceAmount} due on delivery.`
+            : `Full payment of \u20b9${order.total} received via Razorpay.`,
+        }
+      },
+    };
+
+    // For partial: set both tokenReceived (for invoice) and codAdvanceAmount (for admin display)
+    if (isPartial) {
+      updateFields.tokenReceived = advanceAmount;
+      updateFields.codAdvanceAmount = advanceAmount;
+    }
+
+    order = await Order.findByIdAndUpdate(orderId, updateFields, { new: true });
 
     // ── Fire confirmation notification to customer ────────────────
     const userId = order.user;
@@ -122,10 +129,14 @@ exports.verifyRazorpayPayment = async (req, res, next) => {
       .catch(e => console.error('[payment.controller] Notify failed:', e.message));
 
     // Save notification record for in-app history
+    const notifBody = isPartial
+      ? `Advance of \u20b9${advanceAmount} received for order ${order.orderNumber}. Balance \u20b9${order.total - advanceAmount} due on delivery.`
+      : `Full payment of \u20b9${order.total} confirmed for order ${order.orderNumber}.`;
+
     NotificationService.saveRecord({
       sentBy: null,
-      title: '✅ Order Confirmed!',
-      body: `Your order ${order.orderNumber} has been confirmed. Payment received via Razorpay${isPartial ? ' (Advance)' : ''}.`,
+      title: '\u2705 Order Confirmed!',
+      body: notifBody,
       data: { type: 'ORDER_UPDATE', orderId: String(order._id), orderNumber: order.orderNumber, status: 'confirmed' },
       targetType: 'specific_user',
       targetUser: userId,
@@ -133,7 +144,14 @@ exports.verifyRazorpayPayment = async (req, res, next) => {
       status: 'sent',
     }).catch(e => console.error('[payment.controller] Save record failed:', e.message));
 
-    res.json({ success: true, order });
+    res.json({
+      success: true,
+      order,
+      isPartial,
+      advancePaid: isPartial ? advanceAmount : order.total,
+      balanceDue: isPartial ? (order.total - advanceAmount) : 0,
+    });
+
   } catch (err) {
     next(err);
   }

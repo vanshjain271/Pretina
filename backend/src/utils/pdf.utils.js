@@ -45,6 +45,16 @@ const normalizeInvoice = (raw) => {
   const tokenReceived = Number(order.tokenReceived || raw.tokenReceived || 0);
   const balance = Math.max(0, grandTotal - tokenReceived);
 
+  const paymentMethod = order.paymentMethod || raw.paymentMethod || '';
+  const paymentStatus = order.paymentStatus || raw.paymentStatus || 'pending';
+
+  // Human-readable payment method label
+  let paymentLabel = 'Cash on Delivery';
+  if (paymentMethod === 'razorpay') paymentLabel = 'Prepaid (Razorpay)';
+  else if (paymentMethod === 'partial_razorpay') paymentLabel = 'Partial Payment (Razorpay Advance + COD Balance)';
+  else if (paymentMethod === 'qr_upi') paymentLabel = 'UPI/QR Payment';
+  else if (paymentMethod === 'cod') paymentLabel = 'Cash on Delivery';
+
   const sourceItems = order.items || raw.items || [];
   const items = sourceItems.map((item) => ({
     name: item.name || item.product?.name || 'Product',
@@ -68,7 +78,9 @@ const normalizeInvoice = (raw) => {
     tokenReceived,
     balance,
     items,
-    payment: order.paymentMethod || raw.paymentMethod || '-',
+    paymentMethod,
+    paymentStatus,
+    paymentLabel,
   };
 };
 
@@ -112,6 +124,10 @@ const generateInvoicePDF = (rawInvoice) => {
       doc.fillColor(DARK).fontSize(11).font('Helvetica-Bold').text(inv.customerName, 40, 128);
       doc.fillColor(GREY).fontSize(8.5).font('Helvetica').text(inv.customerPhone, 40, 142);
       doc.fillColor(GREY).fontSize(8).font('Helvetica').text(inv.addressStr, 40, 154, { width: 260 });
+
+      // Payment Method label
+      doc.fillColor(PRETINA_COLOR).fontSize(8).font('Helvetica-Bold').text('PAYMENT', 310, 115);
+      doc.fillColor(GREY).fontSize(8).font('Helvetica').text(inv.paymentLabel, 310, 128, { width: 245 });
 
       // Table
       const tableTop = 195;
@@ -173,9 +189,34 @@ const generateInvoicePDF = (rawInvoice) => {
         sumY += 20;
       });
 
-      doc.rect(sumX, sumY, sumW, 26).fill(PRETINA_COLOR);
-      doc.fillColor(WHITE).fontSize(10).font('Helvetica-Bold').text('Balance Due', sumX + 5, sumY + 8, { width: 90 });
-      doc.text(fmt(inv.balance), sumX + 100, sumY + 8, { width: sumW - 110, align: 'right' });
+      // Balance Due / PAID display
+      const isPaid = inv.paymentStatus === 'paid';
+      const isAdvancePaid = inv.paymentStatus === 'advance_paid';
+
+      if (isPaid) {
+        // Show green PAID banner
+        doc.rect(sumX, sumY, sumW, 26).fill('#059669');
+        doc.fillColor(WHITE).fontSize(12).font('Helvetica-Bold').text('\u2713 PAID IN FULL', sumX + 5, sumY + 7, { width: sumW - 10, align: 'center' });
+      } else if (isAdvancePaid && inv.tokenReceived > 0) {
+        // Show advance paid + balance due
+        doc.rect(sumX, sumY, sumW, 26).fill('#D97706');
+        doc.fillColor(WHITE).fontSize(9).font('Helvetica-Bold').text(`Balance Due on Delivery`, sumX + 5, sumY + 4, { width: sumW - 10, align: 'center' });
+        doc.fillColor(WHITE).fontSize(11).font('Helvetica-Bold').text(fmt(inv.balance), sumX + 5, sumY + 14, { width: sumW - 10, align: 'center' });
+      } else {
+        // Regular balance due
+        doc.rect(sumX, sumY, sumW, 26).fill(PRETINA_COLOR);
+        doc.fillColor(WHITE).fontSize(10).font('Helvetica-Bold').text('Balance Due', sumX + 5, sumY + 8, { width: 90 });
+        doc.text(fmt(inv.balance), sumX + 100, sumY + 8, { width: sumW - 110, align: 'right' });
+      }
+
+      // PAID watermark stamp for fully paid orders
+      if (isPaid) {
+        doc.save();
+        doc.rotate(-35, { origin: [W / 2, 400] });
+        doc.fillColor('#059669').opacity(0.08).fontSize(90).font('Helvetica-Bold').text('PAID', 100, 320, { width: 400, align: 'center' });
+        doc.restore();
+        doc.opacity(1);
+      }
 
       // Footer
       const footerY = 800;
@@ -188,6 +229,7 @@ const generateInvoicePDF = (rawInvoice) => {
     } catch (err) { reject(err); }
   });
 };
+
 
 const generatePackingSlipPDF = (order) => {
   return new Promise((resolve, reject) => {
