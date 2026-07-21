@@ -218,8 +218,12 @@ const LiveSearchResults = ({ query, navigation }) => {
           style={styles.liveSearchItem}
           onPress={() => navigation.navigate('ProductDetail', { productId: product._id })}
         >
-          <View style={{ width: 60, height: 60, borderRadius: 8, overflow: 'hidden', backgroundColor: '#fff', marginRight: 12 }}>
-            <ProductImage uri={product.images?.[0]} />
+          <View style={{ width: 60, height: 60, borderRadius: 8, overflow: 'hidden', backgroundColor: '#fff', marginRight: 12, justifyContent: 'center', alignItems: 'center' }}>
+            <Image 
+              source={product.images?.[0] ? { uri: product.images[0] } : require('../../../assets/logo.png')}
+              style={{ width: 50, height: 50 }}
+              contentFit="contain"
+            />
           </View>
           <View style={{ flex: 1, justifyContent: 'center' }}>
             <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimaryLight }} numberOfLines={2}>{product.name}</Text>
@@ -592,8 +596,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingHorizontal: 16,
     paddingBottom: 8,
-    zIndex: 10,
-    elevation: 10,
   },
   searchBar: {
     flexDirection: 'row',

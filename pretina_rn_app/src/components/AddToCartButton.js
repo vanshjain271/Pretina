@@ -77,7 +77,7 @@ export default function AddToCartButton({ product, variant, fullWidth = false })
           />
         ) : (
           <TouchableOpacity onPress={() => { setInputValue(quantity.toString()); setIsEditing(true); }}>
-            <Text style={styles.qtyText}>{quantity}</Text>
+            <Text style={styles.qtyText} numberOfLines={1} adjustsFontSizeToFit>{quantity}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     borderRadius: 6,
     height: 28,
-    minWidth: 90,
+    minWidth: 95,
   },
   controlBtn: {
     backgroundColor: colors.primary,
@@ -148,11 +148,11 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 7,
   },
   qtyText: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 2,
     fontSize: 14,
     fontWeight: 'bold',
     color: colors.textPrimaryLight,
-    minWidth: 24,
+    minWidth: 28,
     textAlign: 'center',
   },
   input: {
